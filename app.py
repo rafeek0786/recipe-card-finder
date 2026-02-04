@@ -146,7 +146,7 @@ def main_app():
         )
 
     # ----- SEARCH (ALL USERS) -----
-    elif menu == "Search":
+     elif menu == "Search":
         q = st.text_input("Search")
         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
