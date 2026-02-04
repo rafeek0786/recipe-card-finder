@@ -67,7 +67,7 @@ def save_users(users):
 # ---------- LOGIN / SIGNUP ----------
 def auth_page():
     set_bg("assets/login_bg.jpg")
-    st.title("🔐 Recipe Login")
+    st.title("🔐 Recipe Login 🍽")
 
     tab1, tab2 = st.tabs(["Login", "Create Account"])
     users = load_users()
