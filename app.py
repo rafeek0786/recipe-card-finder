@@ -122,6 +122,19 @@ def save_recipes(data):
 
 # ---------- MAIN APP ----------
 def main_app():
+    def suggest_recipes(user_text, recipes):
+    words = user_text.lower().split()
+    result = []
+
+    for recipe in recipes:
+        text = (recipe["name"] + " " + recipe["ingredients"]).lower()
+        for w in words:
+            if w in text:
+                result.append(recipe)
+                break
+
+    return result
+
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card Finder")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
@@ -228,17 +241,22 @@ def main_app():
 
     # ----- SEARCH (ALL USERS) -----
     elif menu == "Search":
-        q = st.text_input("Search")
-        for r in recipes:
-            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
-                st.subheader(r["name"])
-                if r["image"]:
-                    st.image(r["image"], width=300)
-                if r["video"]:
-                    st.video(r["video"])
-                st.write(r["ingredients"])
-                st.write(r["steps"])
-                st.divider()
+        st.subheader("Recipe Suggestions")
+
+    user_text = st.text_input("Type ingredients (example: onion tomato)")
+
+    if user_text:
+        matches = suggest_recipes(user_text, recipes)
+
+        if matches:
+            for r in matches:
+                st.subheader(r["name"])
+                st.write(r["ingredients"])
+                st.write(r["steps"])
+                st.divider()
+        else:
+            st.write("No matching recipes found")
+
 
 # ---------- RUN ----------
 if st.session_state.logged_in:
