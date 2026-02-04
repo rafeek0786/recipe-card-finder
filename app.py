@@ -232,10 +232,6 @@ def main_app():
         q = st.text_input("Search")
         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
-    
-            if not found:
-                st.info("No matching recipes found. Try different ingredients.")
-            
                 st.subheader(r["name"])
                 if r["image"]:
                     st.image(r["image"], width=300)
