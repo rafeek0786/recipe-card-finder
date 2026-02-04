@@ -121,6 +121,22 @@ def save_recipes(data):
 
 # ---------- MAIN APP ----------
 def main_app():
+    st.title("🍽️ Recipe App")
+
+    st.subheader("Recipe Suggestions")
+
+    ingredients_input = st.text_input(
+        "Enter ingredients (comma separated)",
+        placeholder="bread, jam"
+    )
+
+    if ingredients_input:
+        user_items = [i.strip().lower() for i in ingredients_input.split(",")]
+
+        for recipe in recipes:
+            if set(user_items) & set(recipe["ingredients"]):
+                st.write("✅", recipe["name"])
+
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card Finder")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
@@ -133,63 +149,20 @@ def main_app():
 
     recipes = load_recipes()
 
-    # ----- MENU ACTIONS -----
-    if menu == "Search":
-        q = st.text_input("Search")
-        if q:
-            for r in recipes:
-                if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
-                    st.subheader(r["name"])
-                    if r["image"]:
-                        st.image(r["image"], width=300)
-                    if r["video"]:
-                        st.video(r["video"])
-                    st.write(r["ingredients"])
-                    st.write(r["steps"])
-                    st.divider()
+    # ----- MENU BASED ON ROLE -----
+    if st.session_state.role == "admin":
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View / Edit / Delete", "Search"]
+        )
+    else:
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View Recipes", "Search"]
+        )
 
-    elif menu == "View / Edit / Delete":
-        if recipes:
-            names = [r["name"] for r in recipes]
-            choice = st.selectbox("Select Recipe", names)
-            recipe = next(r for r in recipes if r["name"] == choice)
-
-            name = st.text_input("Name", recipe["name"])
-            ing = st.text_area("Ingredients", recipe["ingredients"])
-            steps = st.text_area("Steps", recipe["steps"])
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("Update"):
-                    recipe["name"] = name
-                    recipe["ingredients"] = ing
-                    recipe["steps"] = steps
-                    save_recipes(recipes)
-                    st.success("Updated")
-                    st.rerun()
-
-            with col2:
-                if st.button("Delete"):
-                    recipes.remove(recipe)
-                    save_recipes(recipes)
-                    st.warning("Deleted")
-                    st.rerun()
-        else:
-            st.info("No recipes")
-
-    elif menu == "View Recipes":
-        for r in recipes:
-            st.subheader(r["name"])
-            if r["image"]:
-                st.image(r["image"], width=300)
-            if r["video"]:
-                st.video(r["video"])
-            st.write(r["ingredients"])
-            st.write(r["steps"])
-            st.divider()
-
-    elif menu == "Add Recipe":
+    # ----- ADD RECIPE (ALL USERS) -----
+    if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
         steps = st.text_area("Cooking Steps")
@@ -224,6 +197,62 @@ def main_app():
             else:
                 st.warning("Fill all fields")
 
+    # ----- VIEW / EDIT / DELETE (ADMIN ONLY) -----
+    elif menu == "View / Edit / Delete":
+        if recipes:
+            names = [r["name"] for r in recipes]
+            choice = st.selectbox("Select Recipe", names)
+            recipe = next(r for r in recipes if r["name"] == choice)
+
+            name = st.text_input("Name", recipe["name"])
+            ing = st.text_area("Ingredients", recipe["ingredients"])
+            steps = st.text_area("Steps", recipe["steps"])
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("Update"):
+                    recipe["name"] = name
+                    recipe["ingredients"] = ing
+                    recipe["steps"] = steps
+                    save_recipes(recipes)
+                    st.success("Updated")
+                    st.experimental_rerun()
+
+            with col2:
+                if st.button("Delete"):
+                    recipes.remove(recipe)
+                    save_recipes(recipes)
+                    st.warning("Deleted")
+                    st.experimental_rerun()
+        else:
+            st.info("No recipes")
+
+    # ----- VIEW ONLY (NORMAL USER) -----
+    elif menu == "View Recipes":
+        for r in recipes:
+            st.subheader(r["name"])
+            if r["image"]:
+                st.image(r["image"], width=300)
+            if r["video"]:
+                st.video(r["video"])
+            st.write(r["ingredients"])
+            st.write(r["steps"])
+            st.divider()
+
+    # ----- SEARCH (ALL USERS) -----
+    elif menu == "Search":
+        q = st.text_input("Search")
+        for r in recipes:
+            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
+                st.subheader(r["name"])
+                if r["image"]:
+                    st.image(r["image"], width=300)
+                if r["video"]:
+                    st.video(r["video"])
+                st.write(r["ingredients"])
+                st.write(r["steps"])
+                st.divider()
 
 # ---------- RUN ----------
 if st.session_state.logged_in:
