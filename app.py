@@ -121,6 +121,22 @@ def save_recipes(data):
 
 # ---------- MAIN APP ----------
 def main_app():
+    st.title("🍽️ Recipe App")
+
+    st.subheader("Recipe Suggestions")
+
+    ingredients_input = st.text_input(
+        "Enter ingredients (comma separated)",
+        placeholder="bread, jam"
+    )
+
+    if ingredients_input:
+        user_items = [i.strip().lower() for i in ingredients_input.split(",")]
+
+        for recipe in recipes:
+            if set(user_items) & set(recipe["ingredients"]):
+                st.write("✅", recipe["name"])
+
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card Finder")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
