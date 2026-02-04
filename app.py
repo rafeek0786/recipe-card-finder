@@ -248,15 +248,14 @@ def main_app():
 
     # ----- SEARCH (ALL USERS) -----
     elif menu == "Search":
-        
-    st.subheader("🤖 AI Recipe Suggestions (Based on Ingredients)")
+        st.subheader("🤖 AI Recipe Suggestions (Based on Ingredients)")
 
     user_input = st.text_input(
         "Enter ingredients (comma separated)",
         placeholder="example: onion, tomato, potato"
     )
 
-    if user_input:
+        if user_input:
         matches = ai_ingredient_suggestions(user_input, recipes)
 
         if matches:
