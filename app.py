@@ -145,8 +145,8 @@ def main_app():
             ["Add Recipe", "View Recipes", "Search"]
         )
 
-    # ----- SEARCH (ALL USERS) -----
-    elif menu == "Search":
+ # ----- SEARCH (ALL USERS) -----
+        elif menu == "Search":
         q = st.text_input("Search")
         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
@@ -160,7 +160,7 @@ def main_app():
                 st.divider()
                 
     # ----- VIEW / EDIT / DELETE (ADMIN ONLY) -----
-    elif menu == "View / Edit / Delete":
+        elif menu == "View / Edit / Delete":
         if recipes:
             names = [r["name"] for r in recipes]
             choice = st.selectbox("Select Recipe", names)
@@ -191,7 +191,7 @@ def main_app():
             st.info("No recipes")          
 
     # ----- VIEW ONLY (NORMAL USER) -----
-    elif menu == "View Recipes":
+        elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r["name"])
             if r["image"]:
@@ -203,7 +203,7 @@ def main_app():
             st.divider()
 
     # ----- ADD RECIPE (ALL USERS) -----
-    if menu == "Add Recipe":
+        if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
         steps = st.text_area("Cooking Steps")
