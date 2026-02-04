@@ -241,26 +241,18 @@ def main_app():
             st.divider()
 
     # ----- SEARCH (ALL USERS) -----
-    elif menu == "Search":
-    q = st.text_input("Search")
-
-    for r in recipes:
-        if (
-            q.lower() in r["name"].lower()
-            or any(q_word.strip() in ing for q_word in q.lower().split(",") for ing in r["ingredients"])
-        ):
-            st.subheader(r["name"])
-
-            if r["image"]:
-                st.image(r["image"], width=300)
-
-            if r["video"]:
-                st.video(r["video"])
-
-            st.write(r["ingredients"])
-            st.write(r["steps"])
-            st.divider()
-
+        elif menu == "Search":
+        q = st.text_input("Search")
+        for r in recipes:
+            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
+                st.subheader(r["name"])
+                if r["image"]:
+                    st.image(r["image"], width=300)
+                if r["video"]:
+                    st.video(r["video"])
+                st.write(r["ingredients"])
+                st.write(r["steps"])
+                st.divider()
 
 # ---------- RUN ----------
 if st.session_state.logged_in:
