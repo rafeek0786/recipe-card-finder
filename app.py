@@ -146,9 +146,9 @@ def main_app():
         )
 
  # ----- SEARCH (ALL USERS) -----
-        elif menu == "Search":
-        q = st.text_input("Search")
-        for r in recipes:
+         elif menu == "Search":
+         q = st.text_input("Search")
+         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
                 st.subheader(r["name"])
                 if r["image"]:
@@ -160,9 +160,9 @@ def main_app():
                 st.divider()
                 
     # ----- VIEW / EDIT / DELETE (ADMIN ONLY) -----
-        elif menu == "View / Edit / Delete":
-        if recipes:
-            names = [r["name"] for r in recipes]
+          elif menu == "View / Edit / Delete":
+          if recipes:
+             names = [r["name"] for r in recipes]
             choice = st.selectbox("Select Recipe", names)
             recipe = next(r for r in recipes if r["name"] == choice)
 
@@ -191,8 +191,8 @@ def main_app():
             st.info("No recipes")          
 
     # ----- VIEW ONLY (NORMAL USER) -----
-        elif menu == "View Recipes":
-        for r in recipes:
+         elif menu == "View Recipes":
+         for r in recipes:
             st.subheader(r["name"])
             if r["image"]:
                 st.image(r["image"], width=300)
