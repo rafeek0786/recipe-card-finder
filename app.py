@@ -1,5 +1,3 @@
-from ai_helper import generate_recipe
-
 import streamlit as st
 import json
 import os
@@ -242,17 +240,7 @@ def main_app():
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
-                st.subheader("🤖 AI Recipe Test")
-
-    user_text = st.text_input("Type ingredients for AI")
-
-    if st.button("Use AI"):
-        result = generate_recipe(user_text)
-        st.write(result)
-
-                    
-
-
+                
 # ---------- RUN ----------
 if st.session_state.logged_in:
     main_app()
