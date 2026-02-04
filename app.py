@@ -138,9 +138,10 @@ def main_app():
     # ----- MENU BASED ON ROLE -----
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View / Edit / Delete", "Search"]
-        )
+    "Menu",
+    ["Add Recipe", "View Recipes", "Search", "AI Suggestions"]
+)
+
     else:
         menu = st.sidebar.selectbox(
             "Menu",
@@ -231,6 +232,48 @@ def main_app():
         q = st.text_input("Search")
         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
+    elif menu == "AI Suggestions":
+    st.subheader("🤖 AI Recipe Suggestions")
+
+    user_ingredients = st.text_area(
+        "Enter ingredients you have (comma separated)",
+        placeholder="potato, onion, tomato"
+    )
+
+    if st.button("Suggest Recipes"):
+        if not user_ingredients:
+            st.warning("Please enter ingredients")
+        else:
+            user_items = [i.strip().lower() for i in user_ingredients.split(",")]
+            found = False
+
+            for r in recipes:
+                recipe_ingredients = r["ingredients"].lower()
+
+                match_count = 0
+                for item in user_items:
+                    if item in recipe_ingredients:
+                        match_count += 1
+
+                if match_count >= 2:
+                    found = True
+                    st.subheader(f"✅ {r['name']}")
+                    st.write(f"Matched ingredients: {match_count}")
+                    st.write("🧂 Ingredients:")
+                    st.write(r["ingredients"])
+                    st.write("👨‍🍳 Steps:")
+                    st.write(r["steps"])
+
+                    if r["image"]:
+                        st.image(r["image"], width=250)
+                    if r["video"]:
+                        st.video(r["video"])
+
+                    st.divider()
+
+            if not found:
+                st.info("No matching recipes found. Try different ingredients.")
+            
                 st.subheader(r["name"])
                 if r["image"]:
                     st.image(r["image"], width=300)
