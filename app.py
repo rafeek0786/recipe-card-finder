@@ -1,6 +1,9 @@
 import streamlit as st
 import json
 import os
+if "page" not in st.session_state:
+    st.session_state.page = "login"
+
 def set_bg(image):
     import base64
     with open(image, "rb") as f:
@@ -71,6 +74,9 @@ def auth_page():
 
     tab1, tab2 = st.tabs(["Login", "Create Account"])
     users = load_users()
+    if st.button("Forgot Password?"):
+    st.session_state.page = "forgot"
+
 
     # ----- LOGIN -----
     with tab1:
@@ -243,5 +249,26 @@ if st.session_state.logged_in:
     main_app()
 else:
     auth_page()
+def forgot_password():
+    st.title("🔑 Forgot Password")
+
+    username = st.text_input("Username")
+
+    if username in users:
+        answer = st.text_input("What is your favorite food?")
+
+        if st.button("Verify"):
+            if answer.lower() == users[username]["security_answer"].lower():
+                new_password = st.text_input("New Password", type="password")
+
+                if st.button("Update Password"):
+                    users[username]["password"] = new_password
+                    save_users(users)
+                    st.success("Password changed successfully")
+                    st.session_state.page = "login"
+            else:
+                st.error("Wrong answer")
+    else:
+        st.warning("User not found")
 
 
