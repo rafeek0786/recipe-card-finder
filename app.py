@@ -2,173 +2,189 @@ import streamlit as st
 import json
 import os
 
-# ---------------- LOGIN CREDENTIALS ----------------
-USERNAME = "admin"
-PASSWORD = "admin123"
+# ---------- FILES ----------
+USER_FILE = "users.json"
+DATA_FILE = "recipes.json"
+IMAGE_FOLDER = "images"
+VIDEO_FOLDER = "videos"
 
-# ---------------- SESSION STATE ----------------
+os.makedirs(IMAGE_FOLDER, exist_ok=True)
+os.makedirs(VIDEO_FOLDER, exist_ok=True)
+
+# ---------- SESSION ----------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "current_user" not in st.session_state:
+    st.session_state.current_user = ""
 
-# ---------------- LOGIN PAGE ----------------
-def login_page():
-    st.title("🔐 Login")
-    st.write("Please login to continue")
+# ---------- USER FUNCTIONS ----------
+def load_users():
+    if os.path.exists(USER_FILE):
+        with open(USER_FILE, "r") as f:
+            return json.load(f)
+    return {}
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+def save_users(users):
+    with open(USER_FILE, "w") as f:
+        json.dump(users, f, indent=4)
 
-    if st.button("Login"):
-        if username == USERNAME and password == PASSWORD:
-            st.session_state.logged_in = True
-            st.success("Login successful!")
-            st.experimental_rerun()
-        else:
-            st.error("Invalid username or password")
+# ---------- LOGIN / SIGNUP ----------
+def auth_page():
+    st.title("🔐 Login System")
 
-# ---------------- MAIN APP ----------------
+    tab1, tab2 = st.tabs(["Login", "Create Account"])
+
+    users = load_users()
+
+    # ----- LOGIN -----
+    with tab1:
+        st.subheader("Login")
+
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+
+        if st.button("Login"):
+            if username in users and users[username] == password:
+                st.session_state.logged_in = True
+                st.session_state.current_user = username
+                st.success("Login successful")
+                st.experimental_rerun()
+            else:
+                st.error("Invalid username or password")
+
+    # ----- SIGN UP -----
+    with tab2:
+        st.subheader("Create Account")
+
+        new_user = st.text_input("New Username")
+        new_pass = st.text_input("New Password", type="password")
+        confirm = st.text_input("Confirm Password", type="password")
+
+        if st.button("Create Account"):
+            if not new_user or not new_pass:
+                st.warning("All fields required")
+            elif new_user in users:
+                st.error("Username already exists")
+            elif new_pass != confirm:
+                st.error("Passwords do not match")
+            else:
+                users[new_user] = new_pass
+                save_users(users)
+                st.success("Account created! Please login.")
+
+# ---------- RECIPE FUNCTIONS ----------
+def load_recipes():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_recipes(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+# ---------- MAIN APP ----------
 def main_app():
-    # CONFIG
-    st.set_page_config(page_title="Recipe Card Finder", layout="centered")
-
-    DATA_FILE = "recipes.json"
-    IMAGE_FOLDER = "images"
-    VIDEO_FOLDER = "videos"
-
-    os.makedirs(IMAGE_FOLDER, exist_ok=True)
-    os.makedirs(VIDEO_FOLDER, exist_ok=True)
-
-    # DATA FUNCTIONS
-    def load_recipes():
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, "r") as f:
-                return json.load(f)
-        return []
-
-    def save_recipes(data):
-        with open(DATA_FILE, "w") as f:
-            json.dump(data, f, indent=4)
-
-    recipes = load_recipes()
-
-    # UI
     st.title("🍽️ Recipe Card Finder")
-    st.caption("Login Protected Application")
+    st.caption(f"Logged in as: {st.session_state.current_user}")
 
     if st.button("Logout"):
         st.session_state.logged_in = False
+        st.session_state.current_user = ""
         st.experimental_rerun()
+
+    recipes = load_recipes()
 
     menu = st.sidebar.selectbox(
         "Menu",
-        ["Add Recipe", "View / Edit / Delete", "Search Recipe"]
+        ["Add Recipe", "View / Edit / Delete", "Search"]
     )
 
-    # -------- ADD RECIPE --------
+    # ----- ADD -----
     if menu == "Add Recipe":
-        st.subheader("Add New Recipe")
-
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
         steps = st.text_area("Cooking Steps")
 
-        image = st.file_uploader("Upload Recipe Image", type=["jpg", "png", "jpeg"])
-        video = st.file_uploader("Upload Cooking Video (MP4)", type=["mp4"])
+        image = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
+        video = st.file_uploader("Upload Video", type=["mp4"])
 
         if st.button("Save Recipe"):
-            if not name or not ingredients or not steps:
-                st.warning("Please fill all fields")
-            else:
-                image_path = ""
-                video_path = ""
+            if name and ingredients and steps:
+                img_path = ""
+                vid_path = ""
 
                 if image:
-                    image_path = f"{IMAGE_FOLDER}/{image.name}"
-                    with open(image_path, "wb") as f:
+                    img_path = f"{IMAGE_FOLDER}/{image.name}"
+                    with open(img_path, "wb") as f:
                         f.write(image.getbuffer())
 
                 if video:
-                    video_path = f"{VIDEO_FOLDER}/{video.name}"
-                    with open(video_path, "wb") as f:
+                    vid_path = f"{VIDEO_FOLDER}/{video.name}"
+                    with open(vid_path, "wb") as f:
                         f.write(video.getbuffer())
 
                 recipes.append({
                     "name": name,
                     "ingredients": ingredients,
                     "steps": steps,
-                    "image": image_path,
-                    "video": video_path
+                    "image": img_path,
+                    "video": vid_path
                 })
 
                 save_recipes(recipes)
-                st.success("Recipe added successfully!")
+                st.success("Recipe added")
+            else:
+                st.warning("Fill all fields")
 
-    # -------- VIEW / EDIT / DELETE --------
+    # ----- VIEW / EDIT / DELETE -----
     elif menu == "View / Edit / Delete":
-        st.subheader("Manage Recipes")
+        if recipes:
+            names = [r["name"] for r in recipes]
+            choice = st.selectbox("Select Recipe", names)
+            recipe = next(r for r in recipes if r["name"] == choice)
 
-        if not recipes:
-            st.info("No recipes available")
-        else:
-            recipe_names = [r["name"] for r in recipes]
-            selected = st.selectbox("Select a recipe", recipe_names)
-
-            recipe = next(r for r in recipes if r["name"] == selected)
-
-            if recipe["image"]:
-                st.image(recipe["image"], width=300)
-            if recipe["video"]:
-                st.video(recipe["video"])
-
-            new_name = st.text_input("Edit Recipe Name", recipe["name"])
-            new_ingredients = st.text_area("Edit Ingredients", recipe["ingredients"])
-            new_steps = st.text_area("Edit Cooking Steps", recipe["steps"])
+            name = st.text_input("Name", recipe["name"])
+            ing = st.text_area("Ingredients", recipe["ingredients"])
+            steps = st.text_area("Steps", recipe["steps"])
 
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("Update Recipe"):
-                    recipe["name"] = new_name
-                    recipe["ingredients"] = new_ingredients
-                    recipe["steps"] = new_steps
+                if st.button("Update"):
+                    recipe["name"] = name
+                    recipe["ingredients"] = ing
+                    recipe["steps"] = steps
                     save_recipes(recipes)
-                    st.success("Recipe updated!")
+                    st.success("Updated")
                     st.experimental_rerun()
 
             with col2:
-                if st.button("Delete Recipe"):
+                if st.button("Delete"):
                     recipes.remove(recipe)
                     save_recipes(recipes)
-                    st.warning("Recipe deleted!")
+                    st.warning("Deleted")
                     st.experimental_rerun()
+        else:
+            st.info("No recipes")
 
-    # -------- SEARCH --------
-    elif menu == "Search Recipe":
-        st.subheader("Search Recipe")
+    # ----- SEARCH -----
+    elif menu == "Search":
+        q = st.text_input("Search")
+        for r in recipes:
+            if q.lower() in r["name"].lower():
+                st.write("###", r["name"])
+                if r["image"]:
+                    st.image(r["image"], width=300)
+                if r["video"]:
+                    st.video(r["video"])
+                st.write(r["ingredients"])
+                st.write(r["steps"])
 
-        query = st.text_input("Enter recipe name or ingredient")
-
-        if query:
-            found = False
-            for r in recipes:
-                if query.lower() in r["name"].lower() or query.lower() in r["ingredients"].lower():
-                    st.markdown(f"### 🍲 {r['name']}")
-                    if r["image"]:
-                        st.image(r["image"], width=300)
-                    if r["video"]:
-                        st.video(r["video"])
-                    st.write(r["ingredients"])
-                    st.write(r["steps"])
-                    st.divider()
-                    found = True
-
-            if not found:
-                st.error("No recipe found")
-
-# ---------------- APP FLOW ----------------
-if not st.session_state.logged_in:
-    login_page()
-else:
+# ---------- RUN ----------
+if st.session_state.logged_in:
     main_app()
+else:
+    auth_page()
 
 
