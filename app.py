@@ -6,7 +6,18 @@ def set_bg(image):
     with open(image, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
 
-    def input_style():
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+def input_style():
     st.markdown("""
     <style>
     input {
@@ -23,19 +34,6 @@ def set_bg(image):
     }
     </style>
     """, unsafe_allow_html=True)
-    
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
 
 # ---------- FILES ----------
 USER_FILE = "users.json"
