@@ -133,33 +133,21 @@ def main_app():
 
     recipes = load_recipes()
 
-    # ----- MENU BASED ON ROLE -----
-    if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View / Edit / Delete", "Search"]
-        )
-    else:
-        menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View Recipes", "Search"]
-        )
-
-    # ----- SEARCH (ALL USERS) -----
-     if menu == "Search":
+    # ----- MENU ACTIONS -----
+    if menu == "Search":
         q = st.text_input("Search")
-        for r in recipes:
-            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
-                st.subheader(r["name"])
-                if r["image"]:
-                    st.image(r["image"], width=300)
-                if r["video"]:
-                    st.video(r["video"])
-                st.write(r["ingredients"])
-                st.write(r["steps"])
-                st.divider()
-                
-    # ----- VIEW / EDIT / DELETE (ADMIN ONLY) -----
+        if q:
+            for r in recipes:
+                if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
+                    st.subheader(r["name"])
+                    if r["image"]:
+                        st.image(r["image"], width=300)
+                    if r["video"]:
+                        st.video(r["video"])
+                    st.write(r["ingredients"])
+                    st.write(r["steps"])
+                    st.divider()
+
     elif menu == "View / Edit / Delete":
         if recipes:
             names = [r["name"] for r in recipes]
@@ -179,18 +167,17 @@ def main_app():
                     recipe["steps"] = steps
                     save_recipes(recipes)
                     st.success("Updated")
-                    st.experimental_rerun()
+                    st.rerun()
 
             with col2:
                 if st.button("Delete"):
                     recipes.remove(recipe)
                     save_recipes(recipes)
                     st.warning("Deleted")
-                    st.experimental_rerun()
+                    st.rerun()
         else:
-            st.info("No recipes")          
+            st.info("No recipes")
 
-    # ----- VIEW ONLY (NORMAL USER) -----
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r["name"])
@@ -202,8 +189,7 @@ def main_app():
             st.write(r["steps"])
             st.divider()
 
-    # ----- ADD RECIPE (ALL USERS) -----
-    if menu == "Add Recipe":
+    elif menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
         steps = st.text_area("Cooking Steps")
@@ -237,6 +223,7 @@ def main_app():
                 st.success("Recipe added")
             else:
                 st.warning("Fill all fields")
+
 
 # ---------- RUN ----------
 if st.session_state.logged_in:
