@@ -233,7 +233,7 @@ def main_app():
         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
     
-            elif menu == "AI Suggestions":
+    elif menu == "AI Suggestions":
     st.subheader("🤖 AI Recipe Suggestions")
 
     user_ingredients = st.text_area(
