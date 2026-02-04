@@ -17,23 +17,33 @@ def set_bg(image):
         """,
         unsafe_allow_html=True
     )
-def input_style():
+def login_style():
     st.markdown("""
     <style>
+    /* All text */
+    h1, h2, h3, h4, h5, h6, p, span, label {
+        color: black !important;
+        font-weight: bold;
+    }
+
+    /* Input boxes */
     input {
         background-color: white !important;
         color: black !important;
         border-radius: 8px !important;
         padding: 8px !important;
-        border: 1px solid #ccc !important;
+        border: 1px solid #000 !important;
     }
 
-    label {
+    /* Button */
+    button {
+        background-color: black !important;
         color: white !important;
-        font-weight: bold;
+        border-radius: 8px !important;
     }
     </style>
     """, unsafe_allow_html=True)
+
 
 # ---------- FILES ----------
 USER_FILE = "users.json"
@@ -66,6 +76,7 @@ def save_users(users):
 # ---------- LOGIN / SIGNUP ----------
 def auth_page():
     set_bg("assets/login_bg.jpg")
+    login_style()
     st.title("🔐 Login System")
 
     tab1, tab2 = st.tabs(["Login", "Create Account"])
