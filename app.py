@@ -242,13 +242,15 @@ def main_app():
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
-                    st.subheader("🤖 AI Recipe Test")
+                st.subheader("🤖 AI Recipe Test")
 
     user_text = st.text_input("Type ingredients for AI")
 
     if st.button("Use AI"):
         result = generate_recipe(user_text)
         st.write(result)
+
+                    
 
 
 # ---------- RUN ----------
