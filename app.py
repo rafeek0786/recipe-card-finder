@@ -17,6 +17,23 @@ def set_bg(image):
         """,
         unsafe_allow_html=True
     )
+def input_style():
+    st.markdown("""
+    <style>
+    input {
+        background-color: white !important;
+        color: black !important;
+        border-radius: 8px !important;
+        padding: 8px !important;
+        border: 1px solid #ccc !important;
+    }
+
+    label {
+        color: white !important;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 # ---------- FILES ----------
