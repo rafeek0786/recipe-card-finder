@@ -129,7 +129,8 @@ def main_app():
         st.session_state.logged_in = False
         st.session_state.current_user = ""
         st.session_state.role = ""
-        st.experimental_rerun()
+        st.rerun()
+
 
     recipes = load_recipes()
 
