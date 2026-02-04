@@ -276,18 +276,6 @@ def main_app():
         else:
             st.warning("No recipes match these ingredients")
 
-        q = st.text_input("Search")
-        for r in recipes:
-            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
-                st.subheader(r["name"])
-                if r["image"]:
-                    st.image(r["image"], width=300)
-                if r["video"]:
-                    st.video(r["video"])
-                st.write(r["ingredients"])
-                st.write(r["steps"])
-                st.divider()
-
 # ---------- RUN ----------
 if st.session_state.logged_in:
     main_app()
