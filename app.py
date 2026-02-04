@@ -122,6 +122,26 @@ def save_recipes(data):
 
 # ---------- MAIN APP ----------
 def main_app():
+    def ai_ingredient_suggestions(user_input, recipes):
+    user_ings = [i.strip().lower() for i in user_input.split(",")]
+    results = []
+
+    for r in recipes:
+        recipe_ings = r["ingredients"].lower()
+        match_count = 0
+
+        for ui in user_ings:
+            if ui in recipe_ings:
+                match_count += 1
+
+        if match_count > 0:
+            results.append((match_count, r))
+
+    # sort by best match
+    results.sort(key=lambda x: x[0], reverse=True)
+
+    return [r for _, r in results]
+
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card Finder")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
@@ -228,6 +248,34 @@ def main_app():
 
     # ----- SEARCH (ALL USERS) -----
     elif menu == "Search":
+        
+    st.subheader("🤖 AI Recipe Suggestions (Based on Ingredients)")
+
+    user_input = st.text_input(
+        "Enter ingredients (comma separated)",
+        placeholder="example: onion, tomato, potato"
+    )
+
+    if user_input:
+        matches = ai_ingredient_suggestions(user_input, recipes)
+
+        if matches:
+            st.success(f"Found {len(matches)} matching recipes")
+
+            for r in matches:
+                st.subheader(r["name"])
+                if r["image"]:
+                    st.image(r["image"], width=300)
+                if r["video"]:
+                    st.video(r["video"])
+                st.write("🧄 Ingredients:")
+                st.write(r["ingredients"])
+                st.write("👩‍🍳 Steps:")
+                st.write(r["steps"])
+                st.divider()
+        else:
+            st.warning("No recipes match these ingredients")
+
         q = st.text_input("Search")
         for r in recipes:
             if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
