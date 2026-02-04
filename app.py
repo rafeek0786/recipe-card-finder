@@ -1,9 +1,9 @@
 import streamlit as st
 import json
-import os
 if "page" not in st.session_state:
     st.session_state.page = "login"
 
+import os
 def set_bg(image):
     import base64
     with open(image, "rb") as f:
