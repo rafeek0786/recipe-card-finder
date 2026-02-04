@@ -16,8 +16,10 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "current_user" not in st.session_state:
     st.session_state.current_user = ""
+if "role" not in st.session_state:
+    st.session_state.role = ""
 
-# ---------- USER FUNCTIONS ----------
+# ---------- LOAD & SAVE USERS ----------
 def load_users():
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
@@ -33,29 +35,25 @@ def auth_page():
     st.title("🔐 Login System")
 
     tab1, tab2 = st.tabs(["Login", "Create Account"])
-
     users = load_users()
 
     # ----- LOGIN -----
     with tab1:
-        st.subheader("Login")
-
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
 
         if st.button("Login"):
-            if username in users and users[username] == password:
+            if username in users and users[username]["password"] == password:
                 st.session_state.logged_in = True
                 st.session_state.current_user = username
+                st.session_state.role = users[username]["role"]
                 st.success("Login successful")
                 st.experimental_rerun()
             else:
-                st.error("Invalid username or password")
+                st.error("Invalid credentials")
 
     # ----- SIGN UP -----
     with tab2:
-        st.subheader("Create Account")
-
         new_user = st.text_input("New Username")
         new_pass = st.text_input("New Password", type="password")
         confirm = st.text_input("Confirm Password", type="password")
@@ -68,11 +66,14 @@ def auth_page():
             elif new_pass != confirm:
                 st.error("Passwords do not match")
             else:
-                users[new_user] = new_pass
+                users[new_user] = {
+                    "password": new_pass,
+                    "role": "user"
+                }
                 save_users(users)
-                st.success("Account created! Please login.")
+                st.success("Account created. Please login.")
 
-# ---------- RECIPE FUNCTIONS ----------
+# ---------- RECIPES ----------
 def load_recipes():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
@@ -86,21 +87,29 @@ def save_recipes(data):
 # ---------- MAIN APP ----------
 def main_app():
     st.title("🍽️ Recipe Card Finder")
-    st.caption(f"Logged in as: {st.session_state.current_user}")
+    st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
 
     if st.button("Logout"):
         st.session_state.logged_in = False
         st.session_state.current_user = ""
+        st.session_state.role = ""
         st.experimental_rerun()
 
     recipes = load_recipes()
 
-    menu = st.sidebar.selectbox(
-        "Menu",
-        ["Add Recipe", "View / Edit / Delete", "Search"]
-    )
+    # ----- MENU BASED ON ROLE -----
+    if st.session_state.role == "admin":
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View / Edit / Delete", "Search"]
+        )
+    else:
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View Recipes", "Search"]
+        )
 
-    # ----- ADD -----
+    # ----- ADD RECIPE (ALL USERS) -----
     if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
@@ -131,13 +140,12 @@ def main_app():
                     "image": img_path,
                     "video": vid_path
                 })
-
                 save_recipes(recipes)
                 st.success("Recipe added")
             else:
                 st.warning("Fill all fields")
 
-    # ----- VIEW / EDIT / DELETE -----
+    # ----- VIEW / EDIT / DELETE (ADMIN ONLY) -----
     elif menu == "View / Edit / Delete":
         if recipes:
             names = [r["name"] for r in recipes]
@@ -168,18 +176,31 @@ def main_app():
         else:
             st.info("No recipes")
 
-    # ----- SEARCH -----
+    # ----- VIEW ONLY (NORMAL USER) -----
+    elif menu == "View Recipes":
+        for r in recipes:
+            st.subheader(r["name"])
+            if r["image"]:
+                st.image(r["image"], width=300)
+            if r["video"]:
+                st.video(r["video"])
+            st.write(r["ingredients"])
+            st.write(r["steps"])
+            st.divider()
+
+    # ----- SEARCH (ALL USERS) -----
     elif menu == "Search":
         q = st.text_input("Search")
         for r in recipes:
-            if q.lower() in r["name"].lower():
-                st.write("###", r["name"])
+            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
+                st.subheader(r["name"])
                 if r["image"]:
                     st.image(r["image"], width=300)
                 if r["video"]:
                     st.video(r["video"])
                 st.write(r["ingredients"])
                 st.write(r["steps"])
+                st.divider()
 
 # ---------- RUN ----------
 if st.session_state.logged_in:
