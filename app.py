@@ -1,6 +1,23 @@
 import streamlit as st
 import json
 import os
+def set_bg(image):
+    import base64
+    with open(image, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 # ---------- FILES ----------
 USER_FILE = "users.json"
@@ -32,6 +49,7 @@ def save_users(users):
 
 # ---------- LOGIN / SIGNUP ----------
 def auth_page():
+    set_bg("assets/login_bg.jpg")
     st.title("🔐 Login System")
 
     tab1, tab2 = st.tabs(["Login", "Create Account"])
@@ -86,6 +104,7 @@ def save_recipes(data):
 
 # ---------- MAIN APP ----------
 def main_app():
+    set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card Finder")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
 
