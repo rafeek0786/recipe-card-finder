@@ -83,7 +83,8 @@ def auth_page():
                 st.session_state.current_user = username
                 st.session_state.role = users[username]["role"]
                 st.success("Login successful")
-                st.experimental_rerun()
+                st.rerun()
+
             else:
                 st.error("Invalid credentials")
 
