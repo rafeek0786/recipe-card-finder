@@ -1,13 +1,15 @@
 import streamlit as st
 import json
 import os
+import base64
+import uuid
 
 # ---------- BACKGROUND ----------
 def set_bg(image):
-    import base64
+    if not os.path.exists(image):
+        return
     with open(image, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
-
     st.markdown(
         f"""
         <style>
@@ -30,12 +32,9 @@ os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
 # ---------- SESSION ----------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "current_user" not in st.session_state:
-    st.session_state.current_user = ""
-if "role" not in st.session_state:
-    st.session_state.role = ""
+st.session_state.setdefault("logged_in", False)
+st.session_state.setdefault("current_user", "")
+st.session_state.setdefault("role", "")
 
 # ---------- USERS ----------
 def load_users():
@@ -74,13 +73,13 @@ def auth_page():
         cp = st.text_input("Confirm Password", type="password")
         if st.button("Create Account"):
             if nu in users:
-                st.error("Username exists")
+                st.error("Username already exists")
             elif np != cp:
-                st.error("Passwords mismatch")
+                st.error("Passwords do not match")
             else:
                 users[nu] = {"password": np, "role": "user"}
                 save_users(users)
-                st.success("Account created")
+                st.success("Account created successfully")
 
 # ---------- RECIPES ----------
 def load_recipes():
@@ -93,7 +92,7 @@ def save_recipes(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# ---------- MAIN ----------
+# ---------- MAIN APP ----------
 def main_app():
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe App")
@@ -107,20 +106,15 @@ def main_app():
 
     # ---------- MENU ----------
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox("Menu", [
-            "Add Recipe",
-            "View / Edit / Delete",
-            "Search"
-        ])
+        menu = st.sidebar.selectbox(
+            "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
+        )
     else:
-        menu = st.sidebar.selectbox("Menu", [
-            "Add Recipe",
-            "My Recipes",
-            "View Recipes",
-            "Search"
-        ])
+        menu = st.sidebar.selectbox(
+            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search"]
+        )
 
-    # ---------- ADD ----------
+    # ---------- ADD RECIPE ----------
     if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ing = st.text_area("Ingredients")
@@ -131,10 +125,10 @@ def main_app():
         if st.button("Save"):
             img = vid = ""
             if image:
-                img = f"{IMAGE_FOLDER}/{image.name}"
+                img = f"{IMAGE_FOLDER}/{uuid.uuid4()}_{image.name}"
                 open(img, "wb").write(image.getbuffer())
             if video:
-                vid = f"{VIDEO_FOLDER}/{video.name}"
+                vid = f"{VIDEO_FOLDER}/{uuid.uuid4()}_{video.name}"
                 open(vid, "wb").write(video.getbuffer())
 
             recipes.append({
@@ -143,33 +137,37 @@ def main_app():
                 "steps": steps,
                 "image": img,
                 "video": vid,
-                "owner": st.session_state.current_user   # 🔑 OWNER
+                "owner": st.session_state.current_user
             })
             save_recipes(recipes)
-            st.success("Recipe added")
+            st.success("Recipe added successfully")
 
-    # ---------- ADMIN EDIT ----------
+    # ---------- ADMIN EDIT / DELETE ----------
     elif menu == "View / Edit / Delete":
-        names = [r["name"] for r in recipes]
-        choice = st.selectbox("Select Recipe", names)
-        r = next(x for x in recipes if x["name"] == choice)
+        if not recipes:
+            st.info("No recipes available")
+        else:
+            names = [r["name"] for r in recipes]
+            choice = st.selectbox("Select Recipe", names)
+            r = next(x for x in recipes if x["name"] == choice)
 
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
+            r["name"] = st.text_input("Name", r["name"])
+            r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+            r["steps"] = st.text_area("Steps", r["steps"])
 
-        col1, col2 = st.columns(2)
-        if col1.button("Update"):
-            save_recipes(recipes)
-            st.success("Updated")
-            st.rerun()
-        if col2.button("Delete"):
-            recipes.remove(r)
-            save_recipes(recipes)
-            st.warning("Deleted")
-            st.rerun()
+            col1, col2 = st.columns(2)
+            if col1.button("Update"):
+                save_recipes(recipes)
+                st.success("Recipe updated")
+                st.rerun()
 
-    # ---------- MY RECIPES (USER ONLY) ----------
+            if col2.button("Delete"):
+                recipes.remove(r)
+                save_recipes(recipes)
+                st.warning("Recipe deleted")
+                st.rerun()
+
+    # ---------- USER RECIPES ----------
     elif menu == "My Recipes":
         my = [r for r in recipes if r["owner"] == st.session_state.current_user]
 
@@ -187,15 +185,16 @@ def main_app():
             col1, col2 = st.columns(2)
             if col1.button("Update"):
                 save_recipes(recipes)
-                st.success("Updated")
+                st.success("Recipe updated")
                 st.rerun()
+
             if col2.button("Delete"):
                 recipes.remove(r)
                 save_recipes(recipes)
-                st.warning("Deleted")
+                st.warning("Recipe deleted")
                 st.rerun()
 
-    # ---------- VIEW ----------
+    # ---------- VIEW RECIPES ----------
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r["name"])
