@@ -139,7 +139,7 @@ def auth_page():
                 st.session_state.logged_in = True
                 st.session_state.current_user = user[0]
                 st.session_state.role = user[2]
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("Invalid login")
 
@@ -163,14 +163,20 @@ def main_app():
 
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.rerun()
+        st.experimental_rerun()
 
     recipes = get_all_recipes()
 
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox("Menu", ["Add Recipe", "View / Edit / Delete", "Search"])
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View / Edit / Delete", "Search"]
+        )
     else:
-        menu = st.sidebar.selectbox("Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search"])
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "My Recipes", "View Recipes", "Search"]
+        )
 
     # ===== ADD RECIPE =====
     if menu == "Add Recipe":
@@ -198,7 +204,8 @@ def main_app():
     elif menu == "View / Edit / Delete":
         if not recipes:
             st.info("No recipes found")
-            return
+            st.stop()
+
         names = [r[1] for r in recipes]
         choice = st.selectbox("Select Recipe", names)
         r = next(x for x in recipes if x[1] == choice)
@@ -211,18 +218,19 @@ def main_app():
         if col1.button("Update"):
             update_recipe(r[0], new_name, new_ing, new_steps)
             st.success("Updated")
-            st.rerun()
+            st.experimental_rerun()
+
         if col2.button("Delete"):
             delete_recipe(r[0])
             st.warning("Deleted")
-            st.rerun()
+            st.experimental_rerun()
 
     # ===== MY RECIPES =====
     elif menu == "My Recipes":
         my = [r for r in recipes if r[6] == st.session_state.current_user]
         if not my:
             st.info("No recipes uploaded by you")
-            return
+            st.stop()
 
         names = [r[1] for r in my]
         choice = st.selectbox("Your Recipes", names)
@@ -236,11 +244,12 @@ def main_app():
         if col1.button("Update"):
             update_recipe(r[0], new_name, new_ing, new_steps)
             st.success("Updated")
-            st.rerun()
+            st.experimental_rerun()
+
         if col2.button("Delete"):
             delete_recipe(r[0])
             st.warning("Deleted")
-            st.rerun()
+            st.experimental_rerun()
 
     # ===== VIEW =====
     elif menu == "View Recipes":
