@@ -39,11 +39,21 @@ if "current_user" not in st.session_state:
 if "role" not in st.session_state:
     st.session_state.role = ""
 
+# ---------- SAFE RERUN (FIX LINE ~236) ----------
+def safe_rerun():
+    try:
+        st.rerun()
+    except:
+        st.experimental_rerun()
+
 # ---------- USERS ----------
 def load_users():
     if os.path.exists(USER_FILE):
-        with open(USER_FILE, "r") as f:
-            return json.load(f)
+        try:                         # ✅ FIX LINE ~69
+            with open(USER_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
     return {}
 
 def save_users(users):
@@ -66,7 +76,7 @@ def auth_page():
                 st.session_state.logged_in = True
                 st.session_state.current_user = u
                 st.session_state.role = users[u]["role"]
-                st.experimental_rerun()   # ✅ FIX
+                safe_rerun()
             else:
                 st.error("Invalid login")
 
@@ -87,8 +97,11 @@ def auth_page():
 # ---------- RECIPES ----------
 def load_recipes():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
+        try:                         # ✅ SAME FIX
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return []
     return []
 
 def save_recipes(data):
@@ -103,21 +116,24 @@ def main_app():
 
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.experimental_rerun()   # ✅ FIX
+        safe_rerun()
 
     recipes = load_recipes()
 
     # ---------- MENU ----------
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View / Edit / Delete", "Search"]
-        )
+        menu = st.sidebar.selectbox("Menu", [
+            "Add Recipe",
+            "View / Edit / Delete",
+            "Search"
+        ])
     else:
-        menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "My Recipes", "View Recipes", "Search"]
-        )
+        menu = st.sidebar.selectbox("Menu", [
+            "Add Recipe",
+            "My Recipes",
+            "View Recipes",
+            "Search"
+        ])
 
     # ---------- ADD ----------
     if menu == "Add Recipe":
@@ -132,12 +148,12 @@ def main_app():
 
             if image:
                 img = f"{IMAGE_FOLDER}/{image.name}"
-                with open(img, "wb") as f:      # ✅ FIX (line ~106)
+                with open(img, "wb") as f:
                     f.write(image.getbuffer())
 
             if video:
                 vid = f"{VIDEO_FOLDER}/{video.name}"
-                with open(vid, "wb") as f:      # ✅ FIX (same issue)
+                with open(vid, "wb") as f:
                     f.write(video.getbuffer())
 
             recipes.append({
@@ -169,13 +185,12 @@ def main_app():
         if col1.button("Update"):
             save_recipes(recipes)
             st.success("Updated")
-            st.experimental_rerun()
-
+            safe_rerun()
         if col2.button("Delete"):
             recipes.remove(r)
             save_recipes(recipes)
             st.warning("Deleted")
-            st.experimental_rerun()
+            safe_rerun()
 
     # ---------- MY RECIPES ----------
     elif menu == "My Recipes":
@@ -197,13 +212,12 @@ def main_app():
         if col1.button("Update"):
             save_recipes(recipes)
             st.success("Updated")
-            st.experimental_rerun()
-
+            safe_rerun()
         if col2.button("Delete"):
             recipes.remove(r)
             save_recipes(recipes)
             st.warning("Deleted")
-            st.experimental_rerun()
+            safe_rerun()
 
     # ---------- VIEW ----------
     elif menu == "View Recipes":
