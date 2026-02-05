@@ -122,7 +122,7 @@ def auth_page():
 # ================= MAIN APP =================
 def main_app():
     set_bg("assets/home_bg.jpg")
-    st.title("🍽️ Recipe App")
+    st.title("🍽️ Recipe Card")
 
     st.sidebar.markdown(f"""
     👤 **User:** {st.session_state.current_user}  
@@ -147,7 +147,7 @@ def main_app():
 
     # ================= ADD RECIPE =================
     if menu == "Add Recipe":
-        with st.form("add_recipe", clear_on_submit=True):
+        with st.form("📝add_recipe", clear_on_submit=True):
             name = st.text_input("Recipe Name")
             ing = st.text_area("Ingredients")
             steps = st.text_area("Steps")
@@ -221,7 +221,7 @@ def main_app():
             st.info("No recipes added by you")
             return
 
-        choice = st.selectbox("Your Recipes", [r["name"] for r in my])
+        choice = st.selectbox("📖Your Recipes", [r["name"] for r in my])
         r = next(x for x in my if x["name"] == choice)
 
         r["name"] = st.text_input("Name", r["name"])
