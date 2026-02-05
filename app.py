@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 import os
+import sqlite3
+
 def set_bg(image):
     import base64
     with open(image, "rb") as f:
@@ -41,6 +43,8 @@ USER_FILE = "users.json"
 DATA_FILE = "recipes.json"
 IMAGE_FOLDER = "images"
 VIDEO_FOLDER = "videos"
+DB_FILE = "recipes.db"
+
 
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
@@ -64,6 +68,43 @@ def save_users(users):
     with open(USER_FILE, "w") as f:
         json.dump(users, f, indent=4)
 
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS recipes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            ingredients TEXT,
+            steps TEXT,
+            image TEXT,
+            video TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def add_recipe(name, ingredients, steps, image, video):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO recipes (name, ingredients, steps, image, video) VALUES (?, ?, ?, ?, ?)",
+        (name, ingredients, steps, image, video)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_recipes():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT * FROM recipes")
+    data = c.fetchall()
+    conn.close()
+    return data
+
+
 # ---------- LOGIN / SIGNUP ----------
 def auth_page():
     set_bg("assets/login_bg.jpg")
@@ -79,6 +120,8 @@ def auth_page():
 
         if st.button("Login"):
             if username in users and users[username]["password"] == password:
+                init_db()
+
                 st.session_state.logged_in = True
                 st.session_state.current_user = username
                 st.session_state.role = users[username]["role"]
@@ -133,7 +176,8 @@ def main_app():
         st.rerun()
 
 
-    recipes = load_recipes()
+    recipes = get_recipes()
+
 
     # ----- MENU BASED ON ROLE -----
     if st.session_state.role == "admin":
@@ -172,13 +216,9 @@ def main_app():
                     with open(vid_path, "wb") as f:
                         f.write(video.getbuffer())
 
-                recipes.append({
-                    "name": name,
-                    "ingredients": ingredients,
-                    "steps": steps,
-                    "image": img_path,
-                    "video": vid_path
-                })
+                add_recipe(name, ingredients, steps, img_path, vid_path)
+st.success("Recipe saved in database")
+
                 save_recipes(recipes)
                 st.success("Recipe added")
             else:
@@ -218,7 +258,18 @@ def main_app():
     # ----- VIEW ONLY (NORMAL USER) -----
     elif menu == "View Recipes":
         for r in recipes:
-            st.subheader(r["name"])
+    st.subheader(r[1])
+
+    if r[4]:
+        st.image(r[4], width=300)
+
+    if r[5]:
+        st.video(r[5])
+
+    st.write(r[2])
+    st.write(r[3])
+    st.divider()
+
             if r["image"]:
                 st.image(r["image"], width=300)
             if r["video"]:
