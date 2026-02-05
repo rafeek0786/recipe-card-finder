@@ -134,10 +134,17 @@ def main_app():
 
     recipes = get_recipes()
 
-    menu = st.sidebar.selectbox(
-        "Menu",
-        ["Add Recipe", "View Recipes", "Search"]
-    )
+    # ---------- ROLE BASED MENU ----------
+    if st.session_state.role == "admin":
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View Recipes", "Edit / Delete Recipes", "Search"]
+        )
+    else:
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View Recipes", "Search"]
+        )
 
     # ----- ADD -----
     if menu == "Add Recipe":
@@ -178,6 +185,47 @@ def main_app():
             st.write(r[2])
             st.write(r[3])
             st.divider()
+
+    # ----- EDIT & DELETE (ADMIN ONLY) -----
+    elif menu == "Edit / Delete Recipes" and st.session_state.role == "admin":
+
+        if not recipes:
+            st.info("No recipes available")
+            return
+
+        recipe_names = [r[1] for r in recipes]
+        selected = st.selectbox("Select Recipe", recipe_names)
+        recipe = next(r for r in recipes if r[1] == selected)
+
+        new_name = st.text_input("Recipe Name", recipe[1])
+        new_ing = st.text_area("Ingredients", recipe[2])
+        new_steps = st.text_area("Steps", recipe[3])
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Update Recipe"):
+                conn = sqlite3.connect(DB_FILE)
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE recipes
+                    SET name=?, ingredients=?, steps=?
+                    WHERE id=?
+                """, (new_name, new_ing, new_steps, recipe[0]))
+                conn.commit()
+                conn.close()
+                st.success("Recipe updated")
+                st.rerun()
+
+        with col2:
+            if st.button("Delete Recipe"):
+                conn = sqlite3.connect(DB_FILE)
+                c = conn.cursor()
+                c.execute("DELETE FROM recipes WHERE id=?", (recipe[0],))
+                conn.commit()
+                conn.close()
+                st.warning("Recipe deleted")
+                st.rerun()
 
     # ----- SEARCH -----
     elif menu == "Search":
