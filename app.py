@@ -4,23 +4,6 @@ import os
 import sqlite3
 import base64
 
-# ---------- BACKGROUND ----------
-def set_bg(image):
-    with open(image, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
-
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
 # ---------- FILES ----------
 USER_FILE = "users.json"
 IMAGE_FOLDER = "images"
@@ -30,26 +13,7 @@ DB_FILE = "recipes.db"
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
-# ---------- SESSION ----------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "current_user" not in st.session_state:
-    st.session_state.current_user = ""
-if "role" not in st.session_state:
-    st.session_state.role = ""
-
-# ---------- USERS ----------
-def load_users():
-    if os.path.exists(USER_FILE):
-        with open(USER_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_users(users):
-    with open(USER_FILE, "w") as f:
-        json.dump(users, f, indent=4)
-
-# ---------- DATABASE ----------
+# ---------- DATABASE (PERMANENT) ----------
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -65,6 +29,9 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+
+# ✅ IMPORTANT: initialize DB at APP START
+init_db()
 
 def add_recipe(name, ingredients, steps, image, video):
     conn = sqlite3.connect(DB_FILE)
@@ -84,8 +51,41 @@ def get_recipes():
     conn.close()
     return data
 
-# 🔐 IMPORTANT: DATABASE INITIALIZED ON APP START
-init_db()
+# ---------- BACKGROUND ----------
+def set_bg(image):
+    with open(image, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpg;base64,{encoded}");
+            background-size: cover;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# ---------- SESSION ----------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "current_user" not in st.session_state:
+    st.session_state.current_user = ""
+if "role" not in st.session_state:
+    st.session_state.role = ""
+
+# ---------- USERS ----------
+def load_users():
+    if os.path.exists(USER_FILE):
+        with open(USER_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_users(users):
+    with open(USER_FILE, "w") as f:
+        json.dump(users, f, indent=4)
 
 # ---------- AUTH ----------
 def auth_page():
@@ -136,6 +136,7 @@ def main_app():
 
     recipes = get_recipes()
 
+    # ---------- ROLE MENU ----------
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
             "Menu",
@@ -147,6 +148,7 @@ def main_app():
             ["Add Recipe", "View Recipes", "Search"]
         )
 
+    # ----- ADD -----
     if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
@@ -170,10 +172,11 @@ def main_app():
                         f.write(video.getbuffer())
 
                 add_recipe(name, ingredients, steps, img_path, vid_path)
-                st.success("Recipe saved permanently")
+                st.success("Recipe saved permanently ✅")
             else:
                 st.warning("Fill all fields")
 
+    # ----- VIEW -----
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r[1])
@@ -185,7 +188,9 @@ def main_app():
             st.write(r[3])
             st.divider()
 
+    # ----- EDIT / DELETE (ADMIN ONLY) -----
     elif menu == "Edit / Delete Recipes" and st.session_state.role == "admin":
+
         if not recipes:
             st.info("No recipes available")
             return
@@ -201,7 +206,7 @@ def main_app():
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("Update Recipe"):
+            if st.button("Update"):
                 conn = sqlite3.connect(DB_FILE)
                 c = conn.cursor()
                 c.execute(
@@ -210,19 +215,20 @@ def main_app():
                 )
                 conn.commit()
                 conn.close()
-                st.success("Recipe updated")
+                st.success("Updated permanently")
                 st.rerun()
 
         with col2:
-            if st.button("Delete Recipe"):
+            if st.button("Delete"):
                 conn = sqlite3.connect(DB_FILE)
                 c = conn.cursor()
                 c.execute("DELETE FROM recipes WHERE id=?", (recipe[0],))
                 conn.commit()
                 conn.close()
-                st.warning("Recipe deleted")
+                st.warning("Deleted permanently")
                 st.rerun()
 
+    # ----- SEARCH -----
     elif menu == "Search":
         q = st.text_input("Search")
         for r in recipes:
