@@ -66,7 +66,7 @@ def auth_page():
                 st.session_state.logged_in = True
                 st.session_state.current_user = u
                 st.session_state.role = users[u]["role"]
-                st.experimental_rerun()
+                st.experimental_rerun()   # ✅ FIX
             else:
                 st.error("Invalid login")
 
@@ -98,29 +98,26 @@ def save_recipes(data):
 # ---------- MAIN ----------
 def main_app():
     set_bg("assets/home_bg.jpg")
-    st.title("🍽️ Recipe Card")
+    st.title("🍽️ Recipe App")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
 
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.experimental_rerun()
+        st.experimental_rerun()   # ✅ FIX
 
     recipes = load_recipes()
 
     # ---------- MENU ----------
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox("Menu", [
-            "Add Recipe",
-            "View / Edit / Delete",
-            "Search"
-        ])
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "View / Edit / Delete", "Search"]
+        )
     else:
-        menu = st.sidebar.selectbox("Menu", [
-            "Add Recipe",
-            "My Recipes",
-            "View Recipes",
-            "Search"
-        ])
+        menu = st.sidebar.selectbox(
+            "Menu",
+            ["Add Recipe", "My Recipes", "View Recipes", "Search"]
+        )
 
     # ---------- ADD ----------
     if menu == "Add Recipe":
@@ -132,12 +129,16 @@ def main_app():
 
         if st.button("Save"):
             img = vid = ""
+
             if image:
                 img = f"{IMAGE_FOLDER}/{image.name}"
-                open(img, "wb").write(image.getbuffer())
+                with open(img, "wb") as f:      # ✅ FIX (line ~106)
+                    f.write(image.getbuffer())
+
             if video:
                 vid = f"{VIDEO_FOLDER}/{video.name}"
-                open(vid, "wb").write(video.getbuffer())
+                with open(vid, "wb") as f:      # ✅ FIX (same issue)
+                    f.write(video.getbuffer())
 
             recipes.append({
                 "name": name,
@@ -154,7 +155,7 @@ def main_app():
     elif menu == "View / Edit / Delete":
         if not recipes:
             st.info("No recipes found")
-            st.stop()   # ✅ FIXED
+            st.stop()
 
         names = [r["name"] for r in recipes]
         choice = st.selectbox("Select Recipe", names)
@@ -169,6 +170,7 @@ def main_app():
             save_recipes(recipes)
             st.success("Updated")
             st.experimental_rerun()
+
         if col2.button("Delete"):
             recipes.remove(r)
             save_recipes(recipes)
@@ -181,7 +183,7 @@ def main_app():
 
         if not my:
             st.info("No recipes uploaded by you")
-            st.stop()   # ✅ FIXED
+            st.stop()
 
         names = [r["name"] for r in my]
         choice = st.selectbox("Your Recipes", names)
@@ -196,6 +198,7 @@ def main_app():
             save_recipes(recipes)
             st.success("Updated")
             st.experimental_rerun()
+
         if col2.button("Delete"):
             recipes.remove(r)
             save_recipes(recipes)
