@@ -20,23 +20,6 @@ def set_bg(image):
         unsafe_allow_html=True
     )
 
-def input_style():
-    st.markdown("""
-    <style>
-    input {
-        background-color: white !important;
-        color: black !important;
-        border-radius: 8px !important;
-        padding: 8px !important;
-        border: 1px solid #ccc !important;
-    }
-    label {
-        color: white !important;
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # ---------- FILES ----------
 USER_FILE = "users.json"
 DATA_FILE = "recipes.json"
@@ -54,7 +37,7 @@ if "current_user" not in st.session_state:
 if "role" not in st.session_state:
     st.session_state.role = ""
 
-# ---------- LOAD & SAVE USERS ----------
+# ---------- USERS ----------
 def load_users():
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
@@ -65,49 +48,39 @@ def save_users(users):
     with open(USER_FILE, "w") as f:
         json.dump(users, f, indent=4)
 
-# ---------- LOGIN / SIGNUP ----------
+# ---------- AUTH ----------
 def auth_page():
     set_bg("assets/login_bg.jpg")
-    st.title("🔐 Login System")
+    st.title("🔐 Login")
 
-    tab1, tab2 = st.tabs(["Login", "Create Account"])
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
     users = load_users()
 
-    # ----- LOGIN -----
     with tab1:
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-
+        u = st.text_input("Username")
+        p = st.text_input("Password", type="password")
         if st.button("Login"):
-            if username in users and users[username]["password"] == password:
+            if u in users and users[u]["password"] == p:
                 st.session_state.logged_in = True
-                st.session_state.current_user = username
-                st.session_state.role = users[username]["role"]
-                st.success("Login successful")
+                st.session_state.current_user = u
+                st.session_state.role = users[u]["role"]
                 st.rerun()
             else:
-                st.error("Invalid credentials")
+                st.error("Invalid login")
 
-    # ----- SIGN UP -----
     with tab2:
-        new_user = st.text_input("New Username")
-        new_pass = st.text_input("New Password", type="password")
-        confirm = st.text_input("Confirm Password", type="password")
-
+        nu = st.text_input("New Username")
+        np = st.text_input("New Password", type="password")
+        cp = st.text_input("Confirm Password", type="password")
         if st.button("Create Account"):
-            if not new_user or not new_pass:
-                st.warning("All fields required")
-            elif new_user in users:
-                st.error("Username already exists")
-            elif new_pass != confirm:
-                st.error("Passwords do not match")
+            if nu in users:
+                st.error("Username exists")
+            elif np != cp:
+                st.error("Passwords mismatch")
             else:
-                users[new_user] = {
-                    "password": new_pass,
-                    "role": "user"
-                }
+                users[nu] = {"password": np, "role": "user"}
                 save_users(users)
-                st.success("Account created. Please login.")
+                st.success("Account created")
 
 # ---------- RECIPES ----------
 def load_recipes():
@@ -120,104 +93,113 @@ def save_recipes(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# ---------- MAIN APP ----------
+# ---------- MAIN ----------
 def main_app():
     set_bg("assets/home_bg.jpg")
-    st.title("🍽️ Recipe Card Finder")
+    st.title("🍽️ Recipe App")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
 
     if st.button("Logout"):
         st.session_state.logged_in = False
-        st.session_state.current_user = ""
-        st.session_state.role = ""
         st.rerun()
 
     recipes = load_recipes()
 
-    # ----- MENU BASED ON ROLE -----
+    # ---------- MENU ----------
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View / Edit / Delete", "Search"]
-        )
+        menu = st.sidebar.selectbox("Menu", [
+            "Add Recipe",
+            "View / Edit / Delete",
+            "Search"
+        ])
     else:
-        menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View Recipes", "Search"]
-        )
+        menu = st.sidebar.selectbox("Menu", [
+            "Add Recipe",
+            "My Recipes",
+            "View Recipes",
+            "Search"
+        ])
 
-    # ----- ADD RECIPE -----
+    # ---------- ADD ----------
     if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
-        ingredients = st.text_area("Ingredients")
-        steps = st.text_area("Cooking Steps")
+        ing = st.text_area("Ingredients")
+        steps = st.text_area("Steps")
+        image = st.file_uploader("Image", ["jpg", "png"])
+        video = st.file_uploader("Video", ["mp4"])
 
-        image = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
-        video = st.file_uploader("Upload Video", type=["mp4"])
+        if st.button("Save"):
+            img = vid = ""
+            if image:
+                img = f"{IMAGE_FOLDER}/{image.name}"
+                open(img, "wb").write(image.getbuffer())
+            if video:
+                vid = f"{VIDEO_FOLDER}/{video.name}"
+                open(vid, "wb").write(video.getbuffer())
 
-        if st.button("Save Recipe"):
-            if name and ingredients and steps:
-                img_path = ""
-                vid_path = ""
+            recipes.append({
+                "name": name,
+                "ingredients": ing,
+                "steps": steps,
+                "image": img,
+                "video": vid,
+                "owner": st.session_state.current_user   # 🔑 OWNER
+            })
+            save_recipes(recipes)
+            st.success("Recipe added")
 
-                if image:
-                    img_path = f"{IMAGE_FOLDER}/{image.name}"
-                    with open(img_path, "wb") as f:
-                        f.write(image.getbuffer())
-
-                if video:
-                    vid_path = f"{VIDEO_FOLDER}/{video.name}"
-                    with open(vid_path, "wb") as f:
-                        f.write(video.getbuffer())
-
-                recipes.append({
-                    "name": name,
-                    "ingredients": ingredients,
-                    "steps": steps,
-                    "image": img_path,
-                    "video": vid_path
-                })
-                save_recipes(recipes)
-                st.success("Recipe added")
-            else:
-                st.warning("Fill all fields")
-
-    # ----- ADMIN VIEW / EDIT / DELETE -----
+    # ---------- ADMIN EDIT ----------
     elif menu == "View / Edit / Delete":
-        if recipes:
-            names = [r["name"] for r in recipes]
-            choice = st.selectbox("Select Recipe", names)
-            recipe = next(r for r in recipes if r["name"] == choice)
+        names = [r["name"] for r in recipes]
+        choice = st.selectbox("Select Recipe", names)
+        r = next(x for x in recipes if x["name"] == choice)
 
-            name = st.text_input("Name", recipe["name"])
-            ing = st.text_area("Ingredients", recipe["ingredients"])
-            steps = st.text_area("Steps", recipe["steps"])
+        r["name"] = st.text_input("Name", r["name"])
+        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+        r["steps"] = st.text_area("Steps", r["steps"])
+
+        col1, col2 = st.columns(2)
+        if col1.button("Update"):
+            save_recipes(recipes)
+            st.success("Updated")
+            st.rerun()
+        if col2.button("Delete"):
+            recipes.remove(r)
+            save_recipes(recipes)
+            st.warning("Deleted")
+            st.rerun()
+
+    # ---------- MY RECIPES (USER ONLY) ----------
+    elif menu == "My Recipes":
+        my = [r for r in recipes if r["owner"] == st.session_state.current_user]
+
+        if not my:
+            st.info("No recipes uploaded by you")
+        else:
+            names = [r["name"] for r in my]
+            choice = st.selectbox("Your Recipes", names)
+            r = next(x for x in my if x["name"] == choice)
+
+            r["name"] = st.text_input("Name", r["name"])
+            r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+            r["steps"] = st.text_area("Steps", r["steps"])
 
             col1, col2 = st.columns(2)
+            if col1.button("Update"):
+                save_recipes(recipes)
+                st.success("Updated")
+                st.rerun()
+            if col2.button("Delete"):
+                recipes.remove(r)
+                save_recipes(recipes)
+                st.warning("Deleted")
+                st.rerun()
 
-            with col1:
-                if st.button("Update"):
-                    recipe["name"] = name
-                    recipe["ingredients"] = ing
-                    recipe["steps"] = steps
-                    save_recipes(recipes)
-                    st.success("Updated")
-                    st.rerun()
-
-
-            with col2:
-                if st.button("Delete"):
-                    recipes.remove(recipe)
-                    save_recipes(recipes)
-                    st.warning("Deleted")
-                    st.experimental_rerun()
-        else:
-            st.info("No recipes")
-
-    # ----- VIEW ONLY -----
+    # ---------- VIEW ----------
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r["name"])
+            st.caption(f"By: {r['owner']}")
             if r["image"]:
                 st.image(r["image"], width=300)
             if r["video"]:
@@ -226,16 +208,13 @@ def main_app():
             st.write(r["steps"])
             st.divider()
 
-    # ----- SEARCH -----
+    # ---------- SEARCH ----------
     elif menu == "Search":
         q = st.text_input("Search")
         for r in recipes:
-            if q.lower() in r["name"].lower() or q.lower() in r["ingredients"].lower():
+            if q.lower() in r["name"].lower():
                 st.subheader(r["name"])
-                if r["image"]:
-                    st.image(r["image"], width=300)
-                if r["video"]:
-                    st.video(r["video"])
+                st.caption(f"By: {r['owner']}")
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
