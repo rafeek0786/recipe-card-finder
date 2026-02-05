@@ -110,14 +110,16 @@ def main_app():
     # ---------- MENU ----------
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
+            "Menu",
+            ["Add Recipe", "View / Edit / Delete", "Search"]
         )
     else:
         menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search"]
+            "Menu",
+            ["Add Recipe", "My Recipes", "View Recipes", "Search"]
         )
 
-    # ---------- ADD RECIPE ----------
+    # ---------- ADD ----------
     if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ing = st.text_area("Ingredients")
@@ -144,12 +146,11 @@ def main_app():
                 "video": vid,
                 "owner": st.session_state.current_user
             })
-
             save_recipes(recipes)
-            st.success("Recipe added successfully")
+            st.success("Recipe added")
             st.rerun()
 
-    # ---------- ADMIN VIEW / EDIT / DELETE ----------
+    # ---------- ADMIN EDIT ----------
     elif menu == "View / Edit / Delete":
         if not recipes:
             st.info("No recipes available")
@@ -166,16 +167,16 @@ def main_app():
         col1, col2 = st.columns(2)
         if col1.button("Update"):
             save_recipes(recipes)
-            st.success("Updated successfully")
+            st.success("Updated")
             st.rerun()
 
         if col2.button("Delete"):
             recipes.remove(r)
             save_recipes(recipes)
-            st.warning("Deleted successfully")
+            st.warning("Deleted")
             st.rerun()
 
-    # ---------- MY RECIPES (USER) ----------
+    # ---------- MY RECIPES ----------
     elif menu == "My Recipes":
         my = [r for r in recipes if r["owner"] == st.session_state.current_user]
 
@@ -194,16 +195,16 @@ def main_app():
         col1, col2 = st.columns(2)
         if col1.button("Update"):
             save_recipes(recipes)
-            st.success("Updated successfully")
+            st.success("Updated")
             st.rerun()
 
         if col2.button("Delete"):
             recipes.remove(r)
             save_recipes(recipes)
-            st.warning("Deleted successfully")
+            st.warning("Deleted")
             st.rerun()
 
-    # ---------- VIEW RECIPES ----------
+    # ---------- VIEW ----------
     elif menu == "View Recipes":
         if not recipes:
             st.info("No recipes found")
@@ -216,15 +217,15 @@ def main_app():
                 st.image(r["image"], width=300)
             if r["video"]:
                 st.video(r["video"])
-            st.write("**Ingredients:**")
+            st.write("**Ingredients**")
             st.write(r["ingredients"])
-            st.write("**Steps:**")
+            st.write("**Steps**")
             st.write(r["steps"])
             st.divider()
 
     # ---------- SEARCH ----------
     elif menu == "Search":
-        q = st.text_input("Search by recipe name")
+        q = st.text_input("Search")
         for r in recipes:
             if q.lower() in r["name"].lower():
                 st.subheader(r["name"])
