@@ -37,14 +37,6 @@ if "current_user" not in st.session_state:
 if "role" not in st.session_state:
     st.session_state.role = ""
 
-# 🔹 FORM RESET STATE
-if "recipe_name" not in st.session_state:
-    st.session_state.recipe_name = ""
-if "recipe_ing" not in st.session_state:
-    st.session_state.recipe_ing = ""
-if "recipe_steps" not in st.session_state:
-    st.session_state.recipe_steps = ""
-
 # ---------- USERS ----------
 def load_users():
     if os.path.exists(USER_FILE):
@@ -104,7 +96,7 @@ def save_recipes(data):
 # ---------- MAIN ----------
 def main_app():
     set_bg("assets/home_bg.jpg")
-    st.title("🍽️ Recipe App")
+    st.title("🍽️ Recipe Card")
     st.caption(f"User: {st.session_state.current_user} | Role: {st.session_state.role}")
 
     if st.button("Logout"):
@@ -128,29 +120,22 @@ def main_app():
             "Search"
         ])
 
-    # ---------- ADD RECIPE ----------
+    # ---------- ADD ----------
     if menu == "Add Recipe":
-        name = st.text_input("Recipe Name", key="recipe_name")
-        ing = st.text_area("Ingredients", key="recipe_ing")
-        steps = st.text_area("Steps", key="recipe_steps")
+        name = st.text_input("Recipe Name")
+        ing = st.text_area("Ingredients")
+        steps = st.text_area("Steps")
         image = st.file_uploader("Image", ["jpg", "png"])
         video = st.file_uploader("Video", ["mp4"])
 
         if st.button("Save"):
-            if not name.strip():
-                st.warning("Recipe name required")
-                return
-
             img = vid = ""
             if image:
                 img = f"{IMAGE_FOLDER}/{image.name}"
-                with open(img, "wb") as f:
-                    f.write(image.getbuffer())
-
+                open(img, "wb").write(image.getbuffer())
             if video:
                 vid = f"{VIDEO_FOLDER}/{video.name}"
-                with open(vid, "wb") as f:
-                    f.write(video.getbuffer())
+                open(vid, "wb").write(video.getbuffer())
 
             recipes.append({
                 "name": name,
@@ -160,16 +145,8 @@ def main_app():
                 "video": vid,
                 "owner": st.session_state.current_user
             })
-
             save_recipes(recipes)
-
-            # ✅ CLEAR FORM FOR NEXT RECIPE
-            st.session_state.recipe_name = ""
-            st.session_state.recipe_ing = ""
-            st.session_state.recipe_steps = ""
-
-            st.success("Recipe added successfully")
-            st.rerun()
+            st.success("Recipe added")
 
     # ---------- ADMIN EDIT ----------
     elif menu == "View / Edit / Delete":
