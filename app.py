@@ -1,15 +1,13 @@
 import streamlit as st
 import json
 import os
-import base64
-import uuid
 
 # ---------- BACKGROUND ----------
 def set_bg(image):
-    if not os.path.exists(image):
-        return
+    import base64
     with open(image, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
+
     st.markdown(
         f"""
         <style>
@@ -32,9 +30,20 @@ os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
 # ---------- SESSION ----------
-st.session_state.setdefault("logged_in", False)
-st.session_state.setdefault("current_user", "")
-st.session_state.setdefault("role", "")
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "current_user" not in st.session_state:
+    st.session_state.current_user = ""
+if "role" not in st.session_state:
+    st.session_state.role = ""
+
+# 🔹 FORM RESET STATE
+if "recipe_name" not in st.session_state:
+    st.session_state.recipe_name = ""
+if "recipe_ing" not in st.session_state:
+    st.session_state.recipe_ing = ""
+if "recipe_steps" not in st.session_state:
+    st.session_state.recipe_steps = ""
 
 # ---------- USERS ----------
 def load_users():
@@ -73,13 +82,13 @@ def auth_page():
         cp = st.text_input("Confirm Password", type="password")
         if st.button("Create Account"):
             if nu in users:
-                st.error("Username already exists")
+                st.error("Username exists")
             elif np != cp:
-                st.error("Passwords do not match")
+                st.error("Passwords mismatch")
             else:
                 users[nu] = {"password": np, "role": "user"}
                 save_users(users)
-                st.success("Account created successfully")
+                st.success("Account created")
 
 # ---------- RECIPES ----------
 def load_recipes():
@@ -92,7 +101,7 @@ def save_recipes(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
-# ---------- MAIN APP ----------
+# ---------- MAIN ----------
 def main_app():
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe App")
@@ -106,30 +115,42 @@ def main_app():
 
     # ---------- MENU ----------
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
-        )
+        menu = st.sidebar.selectbox("Menu", [
+            "Add Recipe",
+            "View / Edit / Delete",
+            "Search"
+        ])
     else:
-        menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search"]
-        )
+        menu = st.sidebar.selectbox("Menu", [
+            "Add Recipe",
+            "My Recipes",
+            "View Recipes",
+            "Search"
+        ])
 
     # ---------- ADD RECIPE ----------
     if menu == "Add Recipe":
-        name = st.text_input("Recipe Name")
-        ing = st.text_area("Ingredients")
-        steps = st.text_area("Steps")
+        name = st.text_input("Recipe Name", key="recipe_name")
+        ing = st.text_area("Ingredients", key="recipe_ing")
+        steps = st.text_area("Steps", key="recipe_steps")
         image = st.file_uploader("Image", ["jpg", "png"])
         video = st.file_uploader("Video", ["mp4"])
 
         if st.button("Save"):
+            if not name.strip():
+                st.warning("Recipe name required")
+                return
+
             img = vid = ""
             if image:
-                img = f"{IMAGE_FOLDER}/{uuid.uuid4()}_{image.name}"
-                open(img, "wb").write(image.getbuffer())
+                img = f"{IMAGE_FOLDER}/{image.name}"
+                with open(img, "wb") as f:
+                    f.write(image.getbuffer())
+
             if video:
-                vid = f"{VIDEO_FOLDER}/{uuid.uuid4()}_{video.name}"
-                open(vid, "wb").write(video.getbuffer())
+                vid = f"{VIDEO_FOLDER}/{video.name}"
+                with open(vid, "wb") as f:
+                    f.write(video.getbuffer())
 
             recipes.append({
                 "name": name,
@@ -139,35 +160,39 @@ def main_app():
                 "video": vid,
                 "owner": st.session_state.current_user
             })
+
             save_recipes(recipes)
+
+            # ✅ CLEAR FORM FOR NEXT RECIPE
+            st.session_state.recipe_name = ""
+            st.session_state.recipe_ing = ""
+            st.session_state.recipe_steps = ""
+
             st.success("Recipe added successfully")
+            st.rerun()
 
-    # ---------- ADMIN EDIT / DELETE ----------
+    # ---------- ADMIN EDIT ----------
     elif menu == "View / Edit / Delete":
-        if not recipes:
-            st.info("No recipes available")
-        else:
-            names = [r["name"] for r in recipes]
-            choice = st.selectbox("Select Recipe", names)
-            r = next(x for x in recipes if x["name"] == choice)
+        names = [r["name"] for r in recipes]
+        choice = st.selectbox("Select Recipe", names)
+        r = next(x for x in recipes if x["name"] == choice)
 
-            r["name"] = st.text_input("Name", r["name"])
-            r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-            r["steps"] = st.text_area("Steps", r["steps"])
+        r["name"] = st.text_input("Name", r["name"])
+        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+        r["steps"] = st.text_area("Steps", r["steps"])
 
-            col1, col2 = st.columns(2)
-            if col1.button("Update"):
-                save_recipes(recipes)
-                st.success("Recipe updated")
-                st.rerun()
+        col1, col2 = st.columns(2)
+        if col1.button("Update"):
+            save_recipes(recipes)
+            st.success("Updated")
+            st.rerun()
+        if col2.button("Delete"):
+            recipes.remove(r)
+            save_recipes(recipes)
+            st.warning("Deleted")
+            st.rerun()
 
-            if col2.button("Delete"):
-                recipes.remove(r)
-                save_recipes(recipes)
-                st.warning("Recipe deleted")
-                st.rerun()
-
-    # ---------- USER RECIPES ----------
+    # ---------- MY RECIPES ----------
     elif menu == "My Recipes":
         my = [r for r in recipes if r["owner"] == st.session_state.current_user]
 
@@ -185,16 +210,15 @@ def main_app():
             col1, col2 = st.columns(2)
             if col1.button("Update"):
                 save_recipes(recipes)
-                st.success("Recipe updated")
+                st.success("Updated")
                 st.rerun()
-
             if col2.button("Delete"):
                 recipes.remove(r)
                 save_recipes(recipes)
-                st.warning("Recipe deleted")
+                st.warning("Deleted")
                 st.rerun()
 
-    # ---------- VIEW RECIPES ----------
+    # ---------- VIEW ----------
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r["name"])
