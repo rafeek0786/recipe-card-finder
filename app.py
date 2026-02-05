@@ -68,6 +68,7 @@ def save_recipes(recipes):
 
 # ================= AUTH =================
 def auth_page():
+    set_bg("assets/login_bg.jpg")
     st.title("🔐 Login")
 
     users = load_users()
@@ -80,8 +81,10 @@ def auth_page():
 
         if st.button("Login"):
             if u in users:
+                # ADMIN → plain text password (unchanged)
                 if users[u]["role"] == "admin":
                     valid = users[u]["password"] == p
+                # USER → hashed password
                 else:
                     valid = users[u]["password"] == hash_password(p)
 
@@ -110,7 +113,7 @@ def auth_page():
                 st.error("All fields required")
             else:
                 users[nu] = {
-                    "password": hash_password(np),
+                    "password": hash_password(np),  # hash ONLY users
                     "role": "user"
                 }
                 save_users(users)
@@ -118,6 +121,7 @@ def auth_page():
 
 # ================= MAIN APP =================
 def main_app():
+    set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card")
 
     st.sidebar.markdown(f"""
