@@ -202,7 +202,8 @@ def main_app():
                     recipe["steps"] = steps
                     save_recipes(recipes)
                     st.success("Updated")
-                    st.experimental_rerun()
+                    st.rerun()
+
 
             with col2:
                 if st.button("Delete"):
