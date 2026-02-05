@@ -84,6 +84,9 @@ def get_recipes():
     conn.close()
     return data
 
+# 🔐 IMPORTANT: DATABASE INITIALIZED ON APP START
+init_db()
+
 # ---------- AUTH ----------
 def auth_page():
     set_bg("assets/login_bg.jpg")
@@ -98,7 +101,6 @@ def auth_page():
 
         if st.button("Login"):
             if u in users and users[u]["password"] == p:
-                init_db()
                 st.session_state.logged_in = True
                 st.session_state.current_user = u
                 st.session_state.role = users[u]["role"]
@@ -134,7 +136,6 @@ def main_app():
 
     recipes = get_recipes()
 
-    # ---------- ROLE BASED MENU ----------
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
             "Menu",
@@ -146,7 +147,6 @@ def main_app():
             ["Add Recipe", "View Recipes", "Search"]
         )
 
-    # ----- ADD -----
     if menu == "Add Recipe":
         name = st.text_input("Recipe Name")
         ingredients = st.text_area("Ingredients")
@@ -170,11 +170,10 @@ def main_app():
                         f.write(video.getbuffer())
 
                 add_recipe(name, ingredients, steps, img_path, vid_path)
-                st.success("Recipe saved successfully")
+                st.success("Recipe saved permanently")
             else:
                 st.warning("Fill all fields")
 
-    # ----- VIEW -----
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r[1])
@@ -186,15 +185,13 @@ def main_app():
             st.write(r[3])
             st.divider()
 
-    # ----- EDIT & DELETE (ADMIN ONLY) -----
     elif menu == "Edit / Delete Recipes" and st.session_state.role == "admin":
-
         if not recipes:
             st.info("No recipes available")
             return
 
-        recipe_names = [r[1] for r in recipes]
-        selected = st.selectbox("Select Recipe", recipe_names)
+        names = [r[1] for r in recipes]
+        selected = st.selectbox("Select Recipe", names)
         recipe = next(r for r in recipes if r[1] == selected)
 
         new_name = st.text_input("Recipe Name", recipe[1])
@@ -207,11 +204,10 @@ def main_app():
             if st.button("Update Recipe"):
                 conn = sqlite3.connect(DB_FILE)
                 c = conn.cursor()
-                c.execute("""
-                    UPDATE recipes
-                    SET name=?, ingredients=?, steps=?
-                    WHERE id=?
-                """, (new_name, new_ing, new_steps, recipe[0]))
+                c.execute(
+                    "UPDATE recipes SET name=?, ingredients=?, steps=? WHERE id=?",
+                    (new_name, new_ing, new_steps, recipe[0])
+                )
                 conn.commit()
                 conn.close()
                 st.success("Recipe updated")
@@ -227,7 +223,6 @@ def main_app():
                 st.warning("Recipe deleted")
                 st.rerun()
 
-    # ----- SEARCH -----
     elif menu == "Search":
         q = st.text_input("Search")
         for r in recipes:
