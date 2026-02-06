@@ -26,6 +26,9 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
+if "open_ai" not in st.session_state:
+    st.session_state.open_ai = False
+
 
 # ================= BACKGROUND =================
 def set_bg(image):
@@ -113,6 +116,36 @@ def auth_page():
 def main_app():
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card")
+    st.markdown("""
+<style>
+.ai-float-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background-color: #ff4b4b;
+    color: white;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    font-size: 32px;
+    text-align: center;
+    line-height: 65px;
+    cursor: pointer;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    z-index: 9999;
+}
+.ai-float-btn:hover {
+    background-color: #ff0000;
+}
+</style>
+
+<div class="ai-float-btn" onclick="document.getElementById('aiBtn').click()">
+🤖
+</div>
+""", unsafe_allow_html=True)
+
+    if st.button("AI", key="aiBtn"):
+    st.session_state.open_ai = True
 
     st.sidebar.markdown(f"""
     👤 **User:** {st.session_state.current_user}  
@@ -127,14 +160,22 @@ def main_app():
 
     # ================= MENU =================
     if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox(
-    "Menu", ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"]
-)
+    menu = st.sidebar.selectbox(
+        "Menu",
+        ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"],
+        index=3 if st.session_state.open_ai else 0
+    )
+else:
+    menu = st.sidebar.selectbox(
+        "Menu",
+        ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"],
+        index=4 if st.session_state.open_ai else 0
+    )
 
-    else:
-        menu = st.sidebar.selectbox(
-    "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"]
-)
+# reset after opening
+if menu != "AI Assistant":
+    st.session_state.open_ai = False
+
 
 
     # ================= ADD RECIPE =================
