@@ -19,10 +19,7 @@ def extract_user_ingredients(sentence: str):
 
 
 def extract_recipe_ingredients(ingredients_text: str):
-    # Handles:
-    # Bread
-    # Onion
-    # Salt
+    # Handles ingredients stored line-by-line
     lines = ingredients_text.splitlines()
     return [normalize(line) for line in lines if line.strip()]
 
@@ -38,7 +35,7 @@ def ai_suggest(user_query: str) -> str:
     if not user_ing:
         return "❗ Please tell me what ingredients you have."
 
-    matches = []
+    results = []
 
     for r in recipes:
         recipe_ing = extract_recipe_ingredients(r["ingredients"])
@@ -50,22 +47,19 @@ def ai_suggest(user_query: str) -> str:
                     matched.add(ri)
 
         if matched:
-            missing = set(recipe_ing) - matched
-            matches.append((len(matched), r, matched, missing))
+            results.append((len(matched), r, matched))
 
-    if not matches:
-        return "😕 I checked all your recipes, but none match those ingredients."
+    if not results:
+        return "😕 I couldn’t find any recipes related to those ingredients."
 
-    matches.sort(reverse=True, key=lambda x: x[0])
+    results.sort(reverse=True, key=lambda x: x[0])
 
-    response = "🤖 **Recipes you can make based on what you said:**\n\n"
+    response = "🤖 **Here are recipes you can try:**\n\n"
 
-    for score, r, matched, missing in matches[:3]:
+    for score, r, matched in results[:5]:
         response += f"""
 ### 🍽️ {r['name']}
-✅ **You have:** {", ".join(matched)}
-⚠️ **Missing:** {", ".join(missing) if missing else "Nothing"}
-💡 *This recipe matches your available ingredients.*
+✅ **Related ingredients:** {", ".join(matched)}
 ---
 """
 
