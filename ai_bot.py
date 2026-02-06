@@ -2,6 +2,7 @@ from db import load_recipes
 import re
 from difflib import SequenceMatcher
 
+# ---------------- CONSTANTS ----------------
 STOP_WORDS = {
     "i", "have", "a", "an", "the", "with", "and", "or",
     "to", "can", "cook", "make", "using", "want", "need",
@@ -16,6 +17,7 @@ SYNONYMS = {
     "egg": ["eggs"]
 }
 
+# ---------------- UTILITIES ----------------
 def normalize(text):
     return re.sub(r"[^a-z]", "", text.lower())
 
@@ -28,6 +30,19 @@ def expand_synonyms(word):
             return [k] + v
     return [word]
 
+# ---------------- INTENT DETECTION ----------------
+def detect_intent(query: str) -> str:
+    q = query.lower()
+
+    if any(w in q for w in ["how to", "how do", "steps", "method"]):
+        return "how_to"
+
+    if any(w in q for w in ["idea", "ideas", "suggest", "what can i"]):
+        return "ideas"
+
+    return "suggest"
+
+# ---------------- INGREDIENT EXTRACTION ----------------
 def extract_user_ingredients(sentence: str):
     sentence = re.sub(r"[^a-z ]", "", sentence.lower())
     words = sentence.split()
@@ -39,19 +54,18 @@ def extract_user_ingredients(sentence: str):
 
     return list(set(ingredients))
 
-def extract_recipe_ingredients(ingredients_text: str):
-    return [normalize(line) for line in ingredients_text.splitlines() if line.strip()]
+def extract_recipe_ingredients(text: str):
+    return [normalize(line) for line in text.splitlines() if line.strip()]
 
+# ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
 
     if not recipes:
         return "No recipes available."
 
+    intent = detect_intent(user_query)
     user_ing = extract_user_ingredients(user_query)
-
-    if not user_ing:
-        return "Please tell me what ingredients you have."
 
     matches = []
 
@@ -63,6 +77,12 @@ def ai_suggest(user_query: str) -> str:
             for ri in recipe_ing:
                 if ui in ri or ri in ui or similarity(ui, ri) > 0.7:
                     score += 1
+
+        # Intent-based weighting
+        if intent == "how_to" and score > 0:
+            score += 1  # prioritize exact recipes
+        if intent == "ideas":
+            score += 0.5  # broader suggestions
 
         if score > 0:
             matches.append((score, r["name"]))
