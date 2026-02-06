@@ -286,8 +286,16 @@ def main_app():
 
         if user_query:
             with st.spinner("Thinking..."):
-                answer = ai_suggest(user_query)
-                st.markdown(answer)
+                suggested = ai_suggest(user_query)
+
+if suggested:
+    st.markdown("✨ Suggested Recipes")
+
+    for name in suggested:
+        st.button(name)
+else:
+    st.info("No related recipes found.")
+
 
 
 # ================= RUN =================
