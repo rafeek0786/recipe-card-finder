@@ -56,6 +56,6 @@ def ai_suggest(user_query: str) -> str:
     response = "✨ Suggested Recipes\n\n"
 
     for _, name in matches[:5]:
-        response += f"{name}\n\n"
+        response += f"• {name}\n\n"
 
     return response.strip()
