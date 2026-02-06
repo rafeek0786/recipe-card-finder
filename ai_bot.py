@@ -22,7 +22,6 @@ def extract_recipe_ingredients(ingredients_text: str):
 
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
-
     if not recipes:
         return "No recipes available."
 
