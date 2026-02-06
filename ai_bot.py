@@ -18,8 +18,18 @@ SYNONYMS = {
     "bread": ["toast"]
 }
 
+# ✅ SPELLING FIX (ADDED – DOES NOT CHANGE LOGIC)
+SPELLING_FIX = {
+    "tamato": "tomato",
+    "tomoto": "tomato",
+    "tommato": "tomato"
+}
+
 def normalize(text):
     return re.sub(r"[^a-z]", "", text.lower())
+
+def fix_spelling(word):
+    return SPELLING_FIX.get(word, word)
 
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
@@ -40,7 +50,11 @@ def detect_intent(query: str) -> str:
 def extract_user_ingredients(sentence: str):
     sentence = re.sub(r"[^a-z ]", "", sentence.lower())
     words = sentence.split()
-    return [normalize(w) for w in words if w not in STOP_WORDS]
+    return [
+        fix_spelling(normalize(w))
+        for w in words
+        if w not in STOP_WORDS
+    ]
 
 def extract_recipe_ingredients(text: str):
     return [line.strip() for line in text.splitlines() if line.strip()]
@@ -72,7 +86,7 @@ def ai_suggest(user_query: str) -> str:
 
         return "Sorry, I couldn't find the cooking steps for that recipe."
 
-    # ✅ SUGGEST MODE (OLD STYLE)
+    # ✅ SUGGEST MODE
     user_ing = extract_user_ingredients(user_query)
     matches = []
 
