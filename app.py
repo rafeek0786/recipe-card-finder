@@ -1,4 +1,3 @@
-
 import streamlit as st
 import json
 import os
@@ -23,8 +22,6 @@ init_db()
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "selected_recipe" not in st.session_state:
-    st.session_state.selected_recipe = None
 if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
@@ -287,14 +284,9 @@ def main_app():
 
         if user_query:
             with st.spinner("Thinking..."):
-                suggested = ai_suggest(user_query)
+                answer = ai_suggest(user_query)
+                st.markdown(answer)
 
-        if suggested:
-            st.markdown("✨ Suggested Recipes")
-            for name in suggested:
-                st.button(name)
-        else:
-            st.info("No related recipes found.")
 
 # ================= RUN =================
 if st.session_state.logged_in:
