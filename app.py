@@ -8,7 +8,6 @@ import uuid
 from db import init_db, load_recipes, save_recipes
 from ai_bot import ai_suggest
 
-
 # ================= CONFIG =================
 USER_FILE = "users.json"
 IMAGE_FOLDER = "images"
@@ -26,6 +25,9 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
+# 🔹 ADD (SAFE)
+if "selected_recipe" not in st.session_state:
+    st.session_state.selected_recipe = None
 
 # ================= BACKGROUND =================
 def set_bg(image):
@@ -179,7 +181,7 @@ def main_app():
             save_recipes(recipes)
             st.success("Recipe added successfully")
 
-    # ================= ADMIN VIEW / EDIT / DELETE =================
+    # ================= VIEW / EDIT / DELETE =================
     elif menu == "View / Edit / Delete":
         if not recipes:
             st.info("No recipes available")
@@ -244,6 +246,14 @@ def main_app():
 
     # ================= VIEW RECIPES =================
     elif menu == "View Recipes":
+        # 🔹 ADD (SAFE): show clicked recipe
+        if st.session_state.selected_recipe:
+            recipes = [
+                r for r in recipes
+                if r["name"] == st.session_state.selected_recipe
+            ]
+            st.session_state.selected_recipe = None
+
         for r in recipes:
             st.subheader(r["name"])
             st.caption(f"By {r['owner']}")
@@ -278,15 +288,23 @@ def main_app():
     # ================= AI ASSISTANT =================
     elif menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
-        st.caption("Ask questions based on your recipe database")
+        st.caption("Ask using ingredients or sentences")
 
-        user_query = st.text_input("Ask me anything about your recipes")
+        user_query = st.text_input("Example: I have bread and milk")
 
         if user_query:
             with st.spinner("Thinking..."):
-                answer = ai_suggest(user_query)
-                st.markdown(answer)
+                suggestions = ai_suggest(user_query)
 
+            if suggestions:
+                st.markdown("✨ Suggested Recipes")
+                for name in suggestions:
+                    if st.button(f"• {name}", key=f"ai_{name}"):
+                        st.session_state.selected_recipe = name
+                        st.session_state.menu = "View Recipes"
+                        st.rerun()
+            else:
+                st.info("No related recipes found")
 
 # ================= RUN =================
 if st.session_state.logged_in:
