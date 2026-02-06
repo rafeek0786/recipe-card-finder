@@ -1,21 +1,23 @@
 import streamlit as st
 import json
 import os
-import hashlib
 import base64
+import hashlib
+import uuid
 
-from db import init_db, load_recipes
+from db import init_db, load_recipes, save_recipes
 from ai_bot import ai_suggest
+
 
 # ================= CONFIG =================
 USER_FILE = "users.json"
 IMAGE_FOLDER = "images"
 VIDEO_FOLDER = "videos"
-ASSETS_FOLDER = "assets"
 
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
-os.makedirs(ASSETS_FOLDER, exist_ok=True)
+
+init_db()
 
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
@@ -24,23 +26,19 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
-if "open_ai" not in st.session_state:
-    st.session_state.open_ai = False
 
-# ================= BACKGROUND IMAGE FIX =================
-def set_bg(image_path):
-    if not os.path.exists(image_path):
+# ================= BACKGROUND =================
+def set_bg(image):
+    if not os.path.exists(image):
         return
-    with open(image_path, "rb") as img:
-        encoded = base64.b64encode(img.read()).decode()
+    with open(image, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-image: url("data:image/png;base64,{encoded}");
+            background-image: url("data:image/jpg;base64,{encoded}");
             background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
         }}
         </style>
         """,
@@ -56,9 +54,7 @@ def load_users():
     if os.path.exists(USER_FILE):
         with open(USER_FILE, "r") as f:
             return json.load(f)
-    return {
-        "admin": {"password": "admin123", "role": "admin"}
-    }
+    return {}
 
 def save_users(users):
     with open(USER_FILE, "w") as f:
@@ -66,12 +62,10 @@ def save_users(users):
 
 # ================= AUTH =================
 def auth_page():
-    # 🔹 LOGIN BACKGROUND (FIXED)
-    set_bg(os.path.join(ASSETS_FOLDER, "login.png"))
-
+    set_bg("assets/login_bg.jpg")
     st.title("🔐 Login")
-    users = load_users()
 
+    users = load_users()
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
     with tab1:
@@ -98,10 +92,15 @@ def auth_page():
     with tab2:
         nu = st.text_input("New Username")
         np = st.text_input("New Password", type="password")
+        cp = st.text_input("Confirm Password", type="password")
 
         if st.button("Create Account"):
             if nu in users:
-                st.error("User already exists")
+                st.error("Username already exists")
+            elif np != cp:
+                st.error("Passwords do not match")
+            elif not nu or not np:
+                st.error("All fields required")
             else:
                 users[nu] = {
                     "password": hash_password(np),
@@ -112,37 +111,8 @@ def auth_page():
 
 # ================= MAIN APP =================
 def main_app():
-    # 🔹 HOME BACKGROUND (FIXED)
-    set_bg(os.path.join(ASSETS_FOLDER, "home.png"))
-
+    set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card")
-
-    # ---------- FLOATING AI BUTTON ----------
-    st.markdown("""
-    <style>
-    .ai-float-btn {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        background-color: #ff4b4b;
-        color: white;
-        width: 65px;
-        height: 65px;
-        border-radius: 50%;
-        font-size: 32px;
-        text-align: center;
-        line-height: 65px;
-        cursor: pointer;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-        z-index: 9999;
-    }
-    </style>
-
-    <div class="ai-float-btn" onclick="document.getElementById('aiBtn').click()">🤖</div>
-    """, unsafe_allow_html=True)
-
-    if st.button("AI", key="aiBtn"):
-        st.session_state.open_ai = True
 
     st.sidebar.markdown(f"""
     👤 **User:** {st.session_state.current_user}  
@@ -153,34 +123,173 @@ def main_app():
         st.session_state.logged_in = False
         st.rerun()
 
+    recipes = load_recipes()
+
     # ================= MENU =================
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"],
-            index=3 if st.session_state.open_ai else 0
+            "Menu", ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"]
         )
     else:
         menu = st.sidebar.selectbox(
-            "Menu",
-            ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"],
-            index=4 if st.session_state.open_ai else 0
+            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"]
         )
 
-    if menu != "AI Assistant":
-        st.session_state.open_ai = False
+    # ================= ADD RECIPE =================
+    if menu == "Add Recipe":
+        with st.form("add_recipe", clear_on_submit=True):
+            name = st.text_input("Recipe Name")
+            ing = st.text_area("Ingredients")
+            steps = st.text_area("Steps")
+            image = st.file_uploader("Image", ["jpg", "png"])
+            video = st.file_uploader("Video", ["mp4"])
+            submit = st.form_submit_button("Save")
 
-    # ================= AI =================
-    if menu == "AI Assistant":
+        if submit:
+            if not name or not ing or not steps:
+                st.error("All fields required")
+                return
+
+            if any(r["name"] == name for r in recipes):
+                st.error("Recipe name already exists")
+                return
+
+            img = vid = ""
+            if image:
+                img_name = f"{uuid.uuid4()}_{image.name}"
+                img = f"{IMAGE_FOLDER}/{img_name}"
+                with open(img, "wb") as f:
+                    f.write(image.getbuffer())
+
+            if video:
+                vid_name = f"{uuid.uuid4()}_{video.name}"
+                vid = f"{VIDEO_FOLDER}/{vid_name}"
+                with open(vid, "wb") as f:
+                    f.write(video.getbuffer())
+
+            recipes.append({
+                "name": name,
+                "ingredients": ing,
+                "steps": steps,
+                "image": img,
+                "video": vid,
+                "owner": st.session_state.current_user
+            })
+
+            save_recipes(recipes)
+            st.success("Recipe added successfully")
+
+    # ================= ADMIN VIEW / EDIT / DELETE =================
+    elif menu == "View / Edit / Delete":
+        if not recipes:
+            st.info("No recipes available")
+            return
+
+        choice = st.selectbox("Select Recipe", [r["name"] for r in recipes])
+        r = next(x for x in recipes if x["name"] == choice)
+
+        if r["image"] and os.path.exists(r["image"]):
+            st.image(r["image"], width=300)
+
+        if r["video"] and os.path.exists(r["video"]):
+            st.video(r["video"])
+
+        r["name"] = st.text_input("Name", r["name"])
+        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+        r["steps"] = st.text_area("Steps", r["steps"])
+
+        col1, col2 = st.columns(2)
+        if col1.button("Update"):
+            save_recipes(recipes)
+            st.success("Updated")
+            st.rerun()
+
+        if col2.button("Delete"):
+            recipes.remove(r)
+            save_recipes(recipes)
+            st.warning("Deleted")
+            st.rerun()
+
+    # ================= MY RECIPES =================
+    elif menu == "My Recipes":
+        my = [r for r in recipes if r["owner"] == st.session_state.current_user]
+        if not my:
+            st.info("No recipes added by you")
+            return
+
+        choice = st.selectbox("Your Recipes", [r["name"] for r in my])
+        r = next(x for x in my if x["name"] == choice)
+
+        if r["image"] and os.path.exists(r["image"]):
+            st.image(r["image"], width=300)
+
+        if r["video"] and os.path.exists(r["video"]):
+            st.video(r["video"])
+
+        r["name"] = st.text_input("Name", r["name"])
+        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+        r["steps"] = st.text_area("Steps", r["steps"])
+
+        col1, col2 = st.columns(2)
+        if col1.button("Update"):
+            save_recipes(recipes)
+            st.success("Updated")
+            st.rerun()
+
+        if col2.button("Delete"):
+            recipes.remove(r)
+            save_recipes(recipes)
+            st.warning("Deleted")
+            st.rerun()
+
+    # ================= VIEW RECIPES =================
+    elif menu == "View Recipes":
+        for r in recipes:
+            st.subheader(r["name"])
+            st.caption(f"By {r['owner']}")
+
+            if r["image"] and os.path.exists(r["image"]):
+                st.image(r["image"], width=300)
+
+            if r["video"] and os.path.exists(r["video"]):
+                st.video(r["video"])
+
+            st.write(r["ingredients"])
+            st.write(r["steps"])
+            st.divider()
+
+    # ================= SEARCH =================
+    elif menu == "Search":
+        q = st.text_input("Search")
+        for r in recipes:
+            if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
+                st.subheader(r["name"])
+
+                if r["image"] and os.path.exists(r["image"]):
+                    st.image(r["image"], width=300)
+
+                if r["video"] and os.path.exists(r["video"]):
+                    st.video(r["video"])
+
+                st.write(r["ingredients"])
+                st.write(r["steps"])
+                st.divider()
+
+    # ================= AI ASSISTANT =================
+    elif menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
-        q = st.text_input("Ask about recipes")
-        if q:
-            st.markdown(ai_suggest(q))
+        st.caption("Ask questions based on your recipe database")
+
+        user_query = st.text_input("Ask me anything about your recipes")
+
+        if user_query:
+            with st.spinner("Thinking..."):
+                answer = ai_suggest(user_query)
+                st.markdown(answer)
+
 
 # ================= RUN =================
-init_db()
-
-if not st.session_state.logged_in:
-    auth_page()
-else:
+if st.session_state.logged_in:
     main_app()
+else:
+    auth_page()
