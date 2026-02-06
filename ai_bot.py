@@ -53,9 +53,9 @@ def ai_suggest(user_query: str) -> str:
 
     matches.sort(reverse=True, key=lambda x: x[0])
 
-    response = "**Suggested Recipes**\n\n"
+    response = "✨ Suggested Recipes\n\n"
 
     for _, name in matches[:5]:
-        response += f"{name}\n"
+        response += f"• {name}\n"
 
     return response
