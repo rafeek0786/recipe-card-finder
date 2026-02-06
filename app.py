@@ -25,9 +25,10 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
-# 🔹 ADD (SAFE)
 if "selected_recipe" not in st.session_state:
     st.session_state.selected_recipe = None
+if "ai_open" not in st.session_state:           # ✅ added
+    st.session_state.ai_open = False
 
 # ================= BACKGROUND =================
 def set_bg(image):
@@ -115,6 +116,18 @@ def auth_page():
 def main_app():
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card")
+
+    # ---------- FLOATING ICON CSS (ADDED ONLY) ----------
+    st.markdown("""
+    <style>
+    .ai-float {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        z-index: 9999;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     st.sidebar.markdown(f"""
     👤 **User:** {st.session_state.current_user}  
@@ -246,12 +259,8 @@ def main_app():
 
     # ================= VIEW RECIPES =================
     elif menu == "View Recipes":
-        # 🔹 ADD (SAFE): show clicked recipe
         if st.session_state.selected_recipe:
-            recipes = [
-                r for r in recipes
-                if r["name"] == st.session_state.selected_recipe
-            ]
+            recipes = [r for r in recipes if r["name"] == st.session_state.selected_recipe]
             st.session_state.selected_recipe = None
 
         for r in recipes:
@@ -274,37 +283,45 @@ def main_app():
         for r in recipes:
             if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
                 st.subheader(r["name"])
-
-                if r["image"] and os.path.exists(r["image"]):
-                    st.image(r["image"], width=300)
-
-                if r["video"] and os.path.exists(r["video"]):
-                    st.video(r["video"])
-
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
 
-    # ================= AI ASSISTANT =================
+    # ================= AI ASSISTANT PAGE =================
     elif menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
-        st.caption("Ask using ingredients or sentences")
-
         user_query = st.text_input("Example: I have bread and milk")
 
         if user_query:
-            with st.spinner("Thinking..."):
-                suggestions = ai_suggest(user_query)
-
+            suggestions = ai_suggest(user_query)
             if suggestions:
-                st.markdown("✨ Suggested Recipes")
                 for name in suggestions:
-                    if st.button(f"• {name}", key=f"ai_{name}"):
+                    if st.button(f"• {name}", key=f"ai_page_{name}"):
                         st.session_state.selected_recipe = name
                         st.session_state.menu = "View Recipes"
                         st.rerun()
             else:
                 st.info("No related recipes found")
+
+    # ================= FLOATING AI (ADDED) =================
+    if st.session_state.ai_open:
+        st.markdown("---")
+        st.subheader("🤖 AI Assistant")
+        q = st.text_input("Ask here", key="ai_float_input")
+
+        if q:
+            s = ai_suggest(q)
+            for name in s:
+                if st.button(f"• {name}", key=f"ai_float_{name}"):
+                    st.session_state.selected_recipe = name
+                    st.session_state.menu = "View Recipes"
+                    st.rerun()
+
+    with st.container():
+        st.markdown('<div class="ai-float">', unsafe_allow_html=True)
+        if st.button("🤖", key="ai_float_btn"):
+            st.session_state.ai_open = not st.session_state.ai_open
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= RUN =================
 if st.session_state.logged_in:
