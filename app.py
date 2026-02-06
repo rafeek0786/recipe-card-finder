@@ -5,6 +5,9 @@ import base64
 import hashlib
 import uuid
 
+from db import init_db, load_recipes, save_recipes
+
+
 # ================= CONFIG =================
 USER_FILE = "users.json"
 DATA_FILE = "recipes.json"
@@ -13,6 +16,9 @@ VIDEO_FOLDER = "videos"
 
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
+
+init_db()
+
 
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
@@ -54,17 +60,6 @@ def load_users():
 def save_users(users):
     with open(USER_FILE, "w") as f:
         json.dump(users, f, indent=4)
-
-# ================= RECIPES =================
-def load_recipes():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_recipes(recipes):
-    with open(DATA_FILE, "w") as f:
-        json.dump(recipes, f, indent=4)
 
 # ================= AUTH =================
 def auth_page():
