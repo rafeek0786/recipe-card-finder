@@ -5,7 +5,8 @@ from difflib import SequenceMatcher
 STOP_WORDS = {
     "i", "have", "a", "an", "the", "with", "and", "or",
     "to", "can", "cook", "make", "using", "want", "need",
-    "please", "suggest", "recipe", "recipes", "for", "something"
+    "please", "suggest", "recipe", "recipes", "for", "something",
+    "what", "is", "are", "of"
 }
 
 SYNONYMS = {
@@ -23,19 +24,26 @@ def normalize(text):
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
+# ---------------- INTENT DETECTION ----------------
 def detect_intent(query: str) -> str:
     q = query.lower()
+
     if any(w in q for w in ["how to", "how do", "steps", "method"]):
         return "how_to"
+
+    if any(w in q for w in ["ingredient", "ingredients", "contains", "what is in"]):
+        return "ingredients"
+
     return "suggest"
 
+# ---------------- EXTRACTION ----------------
 def extract_user_ingredients(sentence: str):
     sentence = re.sub(r"[^a-z ]", "", sentence.lower())
     words = sentence.split()
     return [normalize(w) for w in words if w not in STOP_WORDS]
 
 def extract_recipe_ingredients(text: str):
-    return [normalize(line) for line in text.splitlines() if line.strip()]
+    return [line.strip() for line in text.splitlines() if line.strip()]
 
 # ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
@@ -46,16 +54,25 @@ def ai_suggest(user_query: str) -> str:
     intent = detect_intent(user_query)
     query_norm = normalize(user_query)
 
-    # ✅ HOW-TO MODE (IMPORTANT FIX)
+    # ✅ INGREDIENTS MODE
+    if intent == "ingredients":
+        for r in recipes:
+            name_norm = normalize(r["name"])
+            if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
+                return f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
+
+        return "Sorry, I couldn't find the ingredients for that recipe."
+
+    # ✅ HOW-TO MODE
     if intent == "how_to":
         for r in recipes:
-            recipe_name = normalize(r["name"])
-            if recipe_name in query_norm or similarity(recipe_name, query_norm) > 0.7:
+            name_norm = normalize(r["name"])
+            if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
                 return f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
 
         return "Sorry, I couldn't find the cooking steps for that recipe."
 
-    # ✅ SUGGEST MODE (OLD STYLE UNCHANGED)
+    # ✅ SUGGEST MODE (OLD STYLE)
     user_ing = extract_user_ingredients(user_query)
     matches = []
 
@@ -65,7 +82,7 @@ def ai_suggest(user_query: str) -> str:
 
         for ui in user_ing:
             for ri in recipe_ing:
-                if ui in ri or ri in ui or similarity(ui, ri) > 0.7:
+                if normalize(ui) in normalize(ri):
                     score += 1
 
         if score > 0:
