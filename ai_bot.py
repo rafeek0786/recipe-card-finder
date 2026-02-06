@@ -20,19 +20,19 @@ def extract_user_ingredients(sentence: str):
 
 def extract_recipe_ingredients(ingredients_text: str):
     lines = ingredients_text.splitlines()
-    return [normalize(line) for line in lines if line.strip()]
+    return [normalize(line) for line in lines if line.strip()
 
 
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
 
     if not recipes:
-        return "❌ No recipes available in your database."
+        return "No recipes available."
 
     user_ing = extract_user_ingredients(user_query)
 
     if not user_ing:
-        return "❗ Please tell me what ingredients you have."
+        return "Please tell me what ingredients you have."
 
     matches = []
 
@@ -49,13 +49,13 @@ def ai_suggest(user_query: str) -> str:
             matches.append((score, r["name"]))
 
     if not matches:
-        return "😕 I couldn’t find any related recipes."
+        return "No related recipes found."
 
     matches.sort(reverse=True, key=lambda x: x[0])
 
-    response = "🤖 **Recipes you can try:**\n\n"
+    response = "**Suggested Recipes**\n\n"
 
     for _, name in matches[:5]:
-        response += f"• {name}\n"
+        response += f"{name}\n"
 
     return response
