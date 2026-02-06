@@ -279,24 +279,22 @@ def main_app():
 
     # ================= AI ASSISTANT =================
     elif menu == "AI Assistant":
-        st.subheader("🤖 AI Recipe Assistant")
-        st.caption("Ask questions based on your recipe database")
+    st.subheader("🤖 AI Recipe Assistant")
+    st.caption("Ask questions based on your recipe database")
 
-        user_query = st.text_input("Ask me anything about your recipes")
+    user_query = st.text_input("Ask me anything about your recipes")
 
-        if user_query:
-            with st.spinner("Thinking..."):
-                suggested = ai_suggest(user_query)
+    if user_query:
+        with st.spinner("Thinking..."):
+            suggested = ai_suggest(user_query)
 
-if suggested:
-    st.markdown("✨ Suggested Recipes")
+        if suggested:
+            st.markdown("✨ Suggested Recipes")
 
-    for name in suggested:
-        st.button(name)
-else:
-    st.info("No related recipes found.")
-
-
+            for name in suggested:
+                st.button(name)
+        else:
+            st.info("No related recipes found.")
 
 # ================= RUN =================
 if st.session_state.logged_in:
