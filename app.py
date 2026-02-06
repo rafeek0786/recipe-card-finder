@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import hashlib
+import base64
 
 from db import init_db, load_recipes
 from ai_bot import ai_suggest
@@ -26,11 +27,25 @@ if "role" not in st.session_state:
 if "open_ai" not in st.session_state:
     st.session_state.open_ai = False
 
-# ================= IMAGE HELPER (FIX ONLY) =================
-def show_image(img_name, width=None):
-    path = os.path.join(ASSETS_FOLDER, img_name)
-    if os.path.exists(path):
-        st.image(path, width=width)
+# ================= BACKGROUND IMAGE FIX =================
+def set_bg(image_path):
+    if not os.path.exists(image_path):
+        return
+    with open(image_path, "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/png;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ================= SECURITY =================
 def hash_password(password):
@@ -51,10 +66,12 @@ def save_users(users):
 
 # ================= AUTH =================
 def auth_page():
-    show_image("login.png", width=300)  # FIXED
-    st.title("🔐 Login")
+    # 🔹 LOGIN BACKGROUND (FIXED)
+    set_bg(os.path.join(ASSETS_FOLDER, "login.png"))
 
+    st.title("🔐 Login")
     users = load_users()
+
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
     with tab1:
@@ -95,7 +112,9 @@ def auth_page():
 
 # ================= MAIN APP =================
 def main_app():
-    show_image("home.png", width=500)  # FIXED
+    # 🔹 HOME BACKGROUND (FIXED)
+    set_bg(os.path.join(ASSETS_FOLDER, "home.png"))
+
     st.title("🍽️ Recipe Card")
 
     # ---------- FLOATING AI BUTTON ----------
@@ -119,9 +138,7 @@ def main_app():
     }
     </style>
 
-    <div class="ai-float-btn" onclick="document.getElementById('aiBtn').click()">
-    🤖
-    </div>
+    <div class="ai-float-btn" onclick="document.getElementById('aiBtn').click()">🤖</div>
     """, unsafe_allow_html=True)
 
     if st.button("AI", key="aiBtn"):
@@ -136,6 +153,7 @@ def main_app():
         st.session_state.logged_in = False
         st.rerun()
 
+    # ================= MENU =================
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
             "Menu",
@@ -152,6 +170,7 @@ def main_app():
     if menu != "AI Assistant":
         st.session_state.open_ai = False
 
+    # ================= AI =================
     if menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
         q = st.text_input("Ask about recipes")
