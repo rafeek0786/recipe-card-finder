@@ -8,7 +8,6 @@ import uuid
 from db import init_db, load_recipes, save_recipes
 from ai_bot import ai_suggest
 
-
 # ================= CONFIG =================
 USER_FILE = "users.json"
 IMAGE_FOLDER = "images"
@@ -26,6 +25,12 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
+
+# 🔹 CHATBOT SESSION (ADDED)
+if "chat_open" not in st.session_state:
+    st.session_state.chat_open = False
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # ================= BACKGROUND =================
 def set_bg(image):
@@ -114,6 +119,7 @@ def main_app():
     set_bg("assets/home_bg.jpg")
     st.title("🍽️ Recipe Card")
 
+    # ---------- SIDEBAR ----------
     st.sidebar.markdown(f"""
     👤 **User:** {st.session_state.current_user}  
     🛡️ **Role:** {st.session_state.role}
@@ -123,16 +129,21 @@ def main_app():
         st.session_state.logged_in = False
         st.rerun()
 
+    # 🔹 CHATBOT BUTTON (ADDED)
+    st.sidebar.divider()
+    if st.sidebar.button("🤖 AI Chatbot"):
+        st.session_state.chat_open = True
+
     recipes = load_recipes()
 
-    # ================= MENU =================
+    # ---------- MENU ----------
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"]
+            "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
         )
     else:
         menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"]
+            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search"]
         )
 
     # ================= ADD RECIPE =================
@@ -264,29 +275,42 @@ def main_app():
         for r in recipes:
             if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
                 st.subheader(r["name"])
-
                 if r["image"] and os.path.exists(r["image"]):
                     st.image(r["image"], width=300)
-
                 if r["video"] and os.path.exists(r["video"]):
                     st.video(r["video"])
-
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
 
-    # ================= AI ASSISTANT =================
-    elif menu == "AI Assistant":
-        st.subheader("🤖 AI Recipe Assistant")
-        st.caption("Ask questions based on your recipe database")
+    # ================= CHATBOT UI (ADDED) =================
+    if st.session_state.chat_open:
+        st.divider()
+        st.subheader("🤖 AI Recipe Chatbot")
 
-        user_query = st.text_input("Ask me anything about your recipes")
+        for msg in st.session_state.chat_history:
+            role = "You" if msg["role"] == "user" else "AI"
+            st.markdown(f"**{role}:** {msg['content']}")
 
-        if user_query:
-            with st.spinner("Thinking..."):
-                answer = ai_suggest(user_query)
-                st.markdown(answer)
+        user_msg = st.text_input("Type your message", key="chat_input")
 
+        col1, col2 = st.columns([1, 3])
+
+        if col1.button("Send"):
+            if user_msg.strip():
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": user_msg}
+                )
+                reply = ai_suggest(user_msg)
+                st.session_state.chat_history.append(
+                    {"role": "ai", "content": reply}
+                )
+                st.rerun()
+
+        if col2.button("Close Chat"):
+            st.session_state.chat_open = False
+            st.session_state.chat_history = []
+            st.rerun()
 
 # ================= RUN =================
 if st.session_state.logged_in:
