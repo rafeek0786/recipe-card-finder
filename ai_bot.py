@@ -1,63 +1,71 @@
 from db import load_recipes
 import re
 
-# Words that are NOT ingredients
 STOP_WORDS = {
     "i", "have", "a", "an", "the", "with", "and", "or",
     "to", "can", "cook", "make", "using", "want", "need",
-    "please", "suggest", "recipe", "recipes", "for"
+    "please", "suggest", "recipe", "recipes", "for", "something"
 }
 
-def extract_ingredients_from_sentence(sentence: str):
+def normalize(text):
+    return re.sub(r"[^a-z]", "", text.lower())
+
+
+def extract_user_ingredients(sentence: str):
     sentence = sentence.lower()
     sentence = re.sub(r"[^a-z ]", "", sentence)
-
     words = sentence.split()
-    ingredients = [w for w in words if w not in STOP_WORDS]
+    return [normalize(w) for w in words if w not in STOP_WORDS]
 
-    return list(set(ingredients))
+
+def extract_recipe_ingredients(ingredients_text: str):
+    # Handles:
+    # Bread
+    # Onion
+    # Salt
+    lines = ingredients_text.splitlines()
+    return [normalize(line) for line in lines if line.strip()]
 
 
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
 
     if not recipes:
-        return "❌ No recipes available in the database."
+        return "❌ No recipes available in your database."
 
-    user_ingredients = extract_ingredients_from_sentence(user_query)
+    user_ing = extract_user_ingredients(user_query)
 
-    if not user_ingredients:
-        return "❗ I couldn't understand the ingredients. Try: *I have bread and milk*"
+    if not user_ing:
+        return "❗ Please tell me what ingredients you have."
 
-    suggestions = []
+    matches = []
 
     for r in recipes:
-        recipe_ingredients = [
-            i.strip().lower()
-            for i in r["ingredients"].split(",")
-            if i.strip()
-        ]
+        recipe_ing = extract_recipe_ingredients(r["ingredients"])
 
-        matched = set(user_ingredients) & set(recipe_ingredients)
-        missing = set(recipe_ingredients) - set(user_ingredients)
+        matched = set()
+        for ui in user_ing:
+            for ri in recipe_ing:
+                if ui in ri or ri in ui:
+                    matched.add(ri)
 
         if matched:
-            score = len(matched)
-            suggestions.append((score, r, matched, missing))
+            missing = set(recipe_ing) - matched
+            matches.append((len(matched), r, matched, missing))
 
-    if not suggestions:
-        return "😕 No matching recipes found. Try adding more ingredients."
+    if not matches:
+        return "😕 I checked all your recipes, but none match those ingredients."
 
-    suggestions.sort(reverse=True, key=lambda x: x[0])
+    matches.sort(reverse=True, key=lambda x: x[0])
 
-    response = "🤖 **Based on what you said, here are the best recipes:**\n\n"
+    response = "🤖 **Recipes you can make based on what you said:**\n\n"
 
-    for score, r, matched, missing in suggestions[:3]:
+    for score, r, matched, missing in matches[:3]:
         response += f"""
 ### 🍽️ {r['name']}
 ✅ **You have:** {", ".join(matched)}
 ⚠️ **Missing:** {", ".join(missing) if missing else "Nothing"}
-💡 *You can cook this with minor adjustments.*
+💡 *This recipe matches your available ingredients.*
 ---
 """
 
