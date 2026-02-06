@@ -125,6 +125,9 @@ def main_app():
 
     recipes = load_recipes()
 
+    query_params = st.query_params
+selected_recipe = query_params.get("view_recipe", None)
+
     # ================= MENU =================
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
@@ -244,19 +247,27 @@ def main_app():
 
     # ================= VIEW RECIPES =================
     elif menu == "View Recipes":
-        for r in recipes:
-            st.subheader(r["name"])
-            st.caption(f"By {r['owner']}")
+    for r in recipes:
+        if selected_recipe and r["name"] != selected_recipe:
+            continue
 
-            if r["image"] and os.path.exists(r["image"]):
-                st.image(r["image"], width=300)
+        st.subheader(r["name"])
+        st.caption(f"By {r['owner']}")
 
-            if r["video"] and os.path.exists(r["video"]):
-                st.video(r["video"])
+        if r["image"] and os.path.exists(r["image"]):
+            st.image(r["image"], width=300)
 
-            st.write(r["ingredients"])
-            st.write(r["steps"])
-            st.divider()
+        if r["video"] and os.path.exists(r["video"]):
+            st.video(r["video"])
+
+        st.write(r["ingredients"])
+        st.write(r["steps"])
+        st.divider()
+
+    # clear URL after view
+    if selected_recipe:
+        st.query_params.clear()
+
 
     # ================= SEARCH =================
     elif menu == "Search":
