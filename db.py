@@ -43,7 +43,6 @@ def load_recipes():
 def save_recipes(recipes):
     conn = get_connection()
     cur = conn.cursor()
-
     cur.execute("DELETE FROM recipes")
 
     for r in recipes:
