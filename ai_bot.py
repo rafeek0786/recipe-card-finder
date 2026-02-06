@@ -19,6 +19,7 @@ def extract_user_ingredients(sentence: str):
 
 
 def extract_recipe_ingredients(ingredients_text: str):
+    # Handles ingredients stored line-by-line
     lines = ingredients_text.splitlines()
     return [normalize(line) for line in lines if line.strip()]
 
@@ -57,8 +58,8 @@ def ai_suggest(user_query: str) -> str:
 
     for score, r, matched in results[:5]:
         response += f"""
-**🍽️ {r['name']}**  
-Related ingredients: {", ".join(matched)}
+### 🍽️ {r['name']}
+✅ **Related ingredients:** {", ".join(matched)}
 ---
 """
 
