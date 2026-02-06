@@ -2,14 +2,12 @@ from db import load_recipes
 import re
 from difflib import SequenceMatcher
 
-# ---------------- STOP WORDS ----------------
 STOP_WORDS = {
     "i", "have", "a", "an", "the", "with", "and", "or",
     "to", "can", "cook", "make", "using", "want", "need",
-    "please", "suggest", "recipe", "recipes", "for", "something"
+    "please", "suggest", "recipe", "recipes", "for"
 }
 
-# ---------------- SYNONYMS ----------------
 SYNONYMS = {
     "rice": ["basmati", "rawrice"],
     "tomato": ["tomatoes"],
@@ -18,7 +16,6 @@ SYNONYMS = {
     "egg": ["eggs"]
 }
 
-# ---------------- HELPERS ----------------
 def normalize(text):
     return re.sub(r"[^a-z]", "", text.lower())
 
@@ -26,74 +23,64 @@ def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
 def expand_synonyms(word):
-    for k, v in SYNONYMS.items():
-        if word == k or word in v:
-            return [k] + v
+    for key, values in SYNONYMS.items():
+        if word == key or word in values:
+            return [key] + values
     return [word]
 
-# ---------------- EXTRACTION ----------------
-def extract_user_ingredients(sentence: str):
-    sentence = sentence.lower()
-    sentence = re.sub(r"[^a-z ]", "", sentence)
+def extract_user_ingredients(sentence):
+    sentence = re.sub(r"[^a-z ]", "", sentence.lower())
     words = sentence.split()
 
-    result = []
-    for w in words:
-        if w not in STOP_WORDS:
-            result.extend(expand_synonyms(normalize(w)))
+    ingredients = []
+    for word in words:
+        if word not in STOP_WORDS:
+            ingredients.extend(expand_synonyms(normalize(word)))
 
-    return list(set(result))
+    return list(set(ingredients))
 
-def extract_recipe_ingredients(ingredients_text: str):
-    lines = ingredients_text.splitlines()
-    result = []
-    for line in lines:
-        if line.strip():
-            result.append(normalize(line))
-    return result
+def extract_recipe_ingredients(text):
+    return [normalize(line) for line in text.splitlines() if line.strip()]
 
-# ---------------- AI CORE ----------------
-def ai_suggest(user_query: str) -> str:
+def ai_suggest(user_query):
     recipes = load_recipes()
 
     if not recipes:
-        return "❌ No recipes available."
+        return "No recipes available."
 
-    user_ing = extract_user_ingredients(user_query)
+    user_ingredients = extract_user_ingredients(user_query)
 
-    if not user_ing:
-        return "❗ Please mention some ingredients."
+    if not user_ingredients:
+        return "Please specify available ingredients."
 
-    matches = []
+    results = []
 
-    for r in recipes:
-        recipe_ing = extract_recipe_ingredients(r["ingredients"])
+    for recipe in recipes:
+        recipe_ingredients = extract_recipe_ingredients(recipe["ingredients"])
         score = 0
-        matched_items = []
+        matched = []
 
-        for ui in user_ing:
-            for ri in recipe_ing:
-                if ui in ri or ri in ui or similarity(ui, ri) > 0.7:
+        for ui in user_ingredients:
+            for ri in recipe_ingredients:
+                if ui in ri or similarity(ui, ri) > 0.7:
                     score += 1
-                    matched_items.append(ui)
+                    matched.append(ui)
 
         if score > 0:
-            matches.append({
+            results.append({
+                "name": recipe["name"],
                 "score": score,
-                "name": r["name"],
-                "matched": list(set(matched_items))
+                "matched": list(set(matched))
             })
 
-    if not matches:
-        return "😔 No related recipes found."
+    if not results:
+        return "No matching recipes found."
 
-    matches.sort(key=lambda x: x["score"], reverse=True)
+    results.sort(key=lambda x: x["score"], reverse=True)
 
-    # ---------------- RESPONSE ----------------
     response = "✨ **AI Suggested Recipes**\n\n"
-
-    for m in matches[:5]:
-        response += f"• **{m['name']}**\n"
-        response += f"  _Matched ingredients:_ {', '.join(m['matched'])}\n\n"
+    for r in results[:5]:
+        response += f"• **{r['name']}**\n"
+        response += f"  _Matched ingredients:_ {', '.join(r['matched'])}\n\n"
 
     return response.strip()
