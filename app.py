@@ -123,6 +123,7 @@ def main_app():
 
     recipes = load_recipes()
 
+    # ================= MENU =================
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
             "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
@@ -175,6 +176,69 @@ def main_app():
 
             save_recipes(recipes)
             st.success("Recipe added successfully")
+
+    # ================= ADMIN VIEW / EDIT / DELETE =================
+    elif menu == "View / Edit / Delete":
+        if not recipes:
+            st.info("No recipes available")
+            return
+
+        choice = st.selectbox("Select Recipe", [r["name"] for r in recipes])
+        r = next(x for x in recipes if x["name"] == choice)
+
+        if r["image"] and os.path.exists(r["image"]):
+            st.image(r["image"], width=300)
+
+        if r["video"] and os.path.exists(r["video"]):
+            st.video(r["video"])
+
+        r["name"] = st.text_input("Name", r["name"])
+        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+        r["steps"] = st.text_area("Steps", r["steps"])
+
+        col1, col2 = st.columns(2)
+        if col1.button("Update"):
+            save_recipes(recipes)
+            st.success("Updated")
+            st.rerun()
+
+        if col2.button("Delete"):
+            recipes.remove(r)
+            save_recipes(recipes)
+            st.warning("Deleted")
+            st.rerun()
+
+    # ================= MY RECIPES =================
+    elif menu == "My Recipes":
+        my = [r for r in recipes if r["owner"] == st.session_state.current_user]
+        if not my:
+            st.info("No recipes added by you")
+            return
+
+        choice = st.selectbox("Your Recipes", [r["name"] for r in my])
+        r = next(x for x in my if x["name"] == choice)
+
+        if r["image"] and os.path.exists(r["image"]):
+            st.image(r["image"], width=300)
+
+        if r["video"] and os.path.exists(r["video"]):
+            st.video(r["video"])
+
+        r["name"] = st.text_input("Name", r["name"])
+        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
+        r["steps"] = st.text_area("Steps", r["steps"])
+
+        col1, col2 = st.columns(2)
+        if col1.button("Update"):
+            save_recipes(recipes)
+            st.success("Updated")
+            st.rerun()
+
+        if col2.button("Delete"):
+            recipes.remove(r)
+            save_recipes(recipes)
+            st.warning("Deleted")
+            st.rerun()
 
     # ================= VIEW RECIPES =================
     elif menu == "View Recipes":
