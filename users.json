@@ -3,5 +3,9 @@
     "password": "r786",
     "role": "admin",
     "security_answer": "biryani"
+  },
+  "testuser": {
+    "password": "hashed_value_here",
+    "role": "user"
   }
 }
