@@ -1,330 +1,210 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import os
-import base64
 import hashlib
-import uuid
 
-from db import init_db, load_recipes, save_recipes
-from ai_bot import ai_suggest
-
-# ================= CONFIG =================
+# ================== CONFIG ==================
+DATA_FILE = "recipes.json"
 USER_FILE = "users.json"
-IMAGE_FOLDER = "images"
-VIDEO_FOLDER = "videos"
 
-os.makedirs(IMAGE_FOLDER, exist_ok=True)
-os.makedirs(VIDEO_FOLDER, exist_ok=True)
+# ================== INIT FILES ==================
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, "w") as f:
+        json.dump([], f)
 
-init_db()
+if not os.path.exists(USER_FILE):
+    with open(USER_FILE, "w") as f:
+        json.dump({
+            "admin": {
+                "password": "admin",
+                "role": "admin"
+            }
+        }, f)
 
-# ================= SESSION =================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "current_user" not in st.session_state:
-    st.session_state.current_user = ""
+# ================== HELPERS ==================
+def hash_password(p):
+    return hashlib.sha256(p.encode()).hexdigest()
+
+def load_users():
+    with open(USER_FILE) as f:
+        return json.load(f)
+
+def save_users(u):
+    with open(USER_FILE, "w") as f:
+        json.dump(u, f, indent=2)
+
+def load_recipes():
+    with open(DATA_FILE) as f:
+        return json.load(f)
+
+def save_recipes(r):
+    with open(DATA_FILE, "w") as f:
+        json.dump(r, f, indent=2)
+
+# ================== AI LOGIC ==================
+def ai_suggest(sentence):
+    words = set(sentence.lower().replace(",", " ").split())
+    recipes = load_recipes()
+
+    matches = []
+    for r in recipes:
+        ingredients = set(i.strip().lower() for i in r["ingredients"].splitlines())
+        if words & ingredients:
+            matches.append(r["name"])
+
+    return list(dict.fromkeys(matches))
+
+# ================== SESSION ==================
+if "login" not in st.session_state:
+    st.session_state.login = False
+if "user" not in st.session_state:
+    st.session_state.user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
 if "selected_recipe" not in st.session_state:
     st.session_state.selected_recipe = None
-if "ai_open" not in st.session_state:           # ✅ added
+if "ai_open" not in st.session_state:
     st.session_state.ai_open = False
 
-# ================= BACKGROUND =================
-def set_bg(image):
-    if not os.path.exists(image):
-        return
-    with open(image, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/jpg;base64,{encoded}");
-            background-size: cover;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-# ================= SECURITY =================
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
-# ================= USERS =================
-def load_users():
-    if os.path.exists(USER_FILE):
-        with open(USER_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_users(users):
-    with open(USER_FILE, "w") as f:
-        json.dump(users, f, indent=4)
-
-# ================= AUTH =================
-def auth_page():
-    set_bg("assets/login_bg.jpg")
+# ================== LOGIN ==================
+if not st.session_state.login:
     st.title("🔐 Login")
 
     users = load_users()
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
 
-    with tab1:
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
+    if st.button("Login"):
+        if u in users:
+            stored = users[u]
+            valid = (
+                stored["password"] == p if stored["role"] == "admin"
+                else stored["password"] == hash_password(p)
+            )
+            if valid:
+                st.session_state.login = True
+                st.session_state.user = u
+                st.session_state.role = stored["role"]
+                st.rerun()
+        st.error("Invalid login")
 
-        if st.button("Login"):
-            if u in users:
-                if users[u]["role"] == "admin":
-                    valid = users[u]["password"] == p
-                else:
-                    valid = users[u]["password"] == hash_password(p)
+    st.stop()
 
-                if valid:
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = u
-                    st.session_state.role = users[u]["role"]
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password")
-            else:
-                st.error("Invalid username or password")
+# ================== MAIN APP ==================
+st.title("🍽️ Recipe App")
+st.sidebar.write(f"👤 {st.session_state.user}")
+st.sidebar.write(f"🛡️ {st.session_state.role}")
 
-    with tab2:
-        nu = st.text_input("New Username")
-        np = st.text_input("New Password", type="password")
-        cp = st.text_input("Confirm Password", type="password")
+if st.sidebar.button("Logout"):
+    st.session_state.login = False
+    st.rerun()
 
-        if st.button("Create Account"):
-            if nu in users:
-                st.error("Username already exists")
-            elif np != cp:
-                st.error("Passwords do not match")
-            elif not nu or not np:
-                st.error("All fields required")
-            else:
-                users[nu] = {
-                    "password": hash_password(np),
-                    "role": "user"
-                }
-                save_users(users)
-                st.success("Account created successfully")
+menu = st.sidebar.selectbox(
+    "Menu",
+    ["Add Recipe", "View Recipes", "Search", "AI Assistant"]
+)
 
-# ================= MAIN APP =================
-def main_app():
-    set_bg("assets/home_bg.jpg")
-    st.title("🍽️ Recipe Card")
+recipes = load_recipes()
 
-    # ---------- FLOATING ICON CSS (ADDED ONLY) ----------
-    st.markdown("""
-    <style>
-    .ai-float {
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        z-index: 9999;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# ================== ADD ==================
+if menu == "Add Recipe":
+    with st.form("add"):
+        name = st.text_input("Recipe Name")
+        ingredients = st.text_area("Ingredients (one per line)")
+        steps = st.text_area("Steps")
+        submit = st.form_submit_button("Save")
 
-    st.sidebar.markdown(f"""
-    👤 **User:** {st.session_state.current_user}  
-    🛡️ **Role:** {st.session_state.role}
-    """)
+    if submit:
+        recipes.append({
+            "name": name,
+            "ingredients": ingredients,
+            "steps": steps
+        })
+        save_recipes(recipes)
+        st.success("Recipe added")
 
-    if st.sidebar.button("Logout"):
-        st.session_state.logged_in = False
-        st.rerun()
+# ================== VIEW ==================
+elif menu == "View Recipes":
+    if st.session_state.selected_recipe:
+        recipes = [r for r in recipes if r["name"] == st.session_state.selected_recipe]
+        st.session_state.selected_recipe = None
 
-    recipes = load_recipes()
+    for r in recipes:
+        st.subheader(r["name"])
+        st.text(r["ingredients"])
+        st.write(r["steps"])
+        st.divider()
 
-    # ================= MENU =================
-    if st.session_state.role == "admin":
-        menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"]
-        )
-    else:
-        menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"]
-        )
-
-    # ================= ADD RECIPE =================
-    if menu == "Add Recipe":
-        with st.form("add_recipe", clear_on_submit=True):
-            name = st.text_input("Recipe Name")
-            ing = st.text_area("Ingredients")
-            steps = st.text_area("Steps")
-            image = st.file_uploader("Image", ["jpg", "png"])
-            video = st.file_uploader("Video", ["mp4"])
-            submit = st.form_submit_button("Save")
-
-        if submit:
-            if not name or not ing or not steps:
-                st.error("All fields required")
-                return
-
-            if any(r["name"] == name for r in recipes):
-                st.error("Recipe name already exists")
-                return
-
-            img = vid = ""
-            if image:
-                img_name = f"{uuid.uuid4()}_{image.name}"
-                img = f"{IMAGE_FOLDER}/{img_name}"
-                with open(img, "wb") as f:
-                    f.write(image.getbuffer())
-
-            if video:
-                vid_name = f"{uuid.uuid4()}_{video.name}"
-                vid = f"{VIDEO_FOLDER}/{vid_name}"
-                with open(vid, "wb") as f:
-                    f.write(video.getbuffer())
-
-            recipes.append({
-                "name": name,
-                "ingredients": ing,
-                "steps": steps,
-                "image": img,
-                "video": vid,
-                "owner": st.session_state.current_user
-            })
-
-            save_recipes(recipes)
-            st.success("Recipe added successfully")
-
-    # ================= VIEW / EDIT / DELETE =================
-    elif menu == "View / Edit / Delete":
-        if not recipes:
-            st.info("No recipes available")
-            return
-
-        choice = st.selectbox("Select Recipe", [r["name"] for r in recipes])
-        r = next(x for x in recipes if x["name"] == choice)
-
-        if r["image"] and os.path.exists(r["image"]):
-            st.image(r["image"], width=300)
-
-        if r["video"] and os.path.exists(r["video"]):
-            st.video(r["video"])
-
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
-
-        col1, col2 = st.columns(2)
-        if col1.button("Update"):
-            save_recipes(recipes)
-            st.success("Updated")
-            st.rerun()
-
-        if col2.button("Delete"):
-            recipes.remove(r)
-            save_recipes(recipes)
-            st.warning("Deleted")
-            st.rerun()
-
-    # ================= MY RECIPES =================
-    elif menu == "My Recipes":
-        my = [r for r in recipes if r["owner"] == st.session_state.current_user]
-        if not my:
-            st.info("No recipes added by you")
-            return
-
-        choice = st.selectbox("Your Recipes", [r["name"] for r in my])
-        r = next(x for x in my if x["name"] == choice)
-
-        if r["image"] and os.path.exists(r["image"]):
-            st.image(r["image"], width=300)
-
-        if r["video"] and os.path.exists(r["video"]):
-            st.video(r["video"])
-
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
-
-        col1, col2 = st.columns(2)
-        if col1.button("Update"):
-            save_recipes(recipes)
-            st.success("Updated")
-            st.rerun()
-
-        if col2.button("Delete"):
-            recipes.remove(r)
-            save_recipes(recipes)
-            st.warning("Deleted")
-            st.rerun()
-
-    # ================= VIEW RECIPES =================
-    elif menu == "View Recipes":
-        if st.session_state.selected_recipe:
-            recipes = [r for r in recipes if r["name"] == st.session_state.selected_recipe]
-            st.session_state.selected_recipe = None
-
-        for r in recipes:
+# ================== SEARCH ==================
+elif menu == "Search":
+    q = st.text_input("Search")
+    for r in recipes:
+        if q.lower() in (r["name"] + r["ingredients"]).lower():
             st.subheader(r["name"])
-            st.caption(f"By {r['owner']}")
-
-            if r["image"] and os.path.exists(r["image"]):
-                st.image(r["image"], width=300)
-
-            if r["video"] and os.path.exists(r["video"]):
-                st.video(r["video"])
-
-            st.write(r["ingredients"])
+            st.text(r["ingredients"])
             st.write(r["steps"])
             st.divider()
 
-    # ================= SEARCH =================
-    elif menu == "Search":
-        q = st.text_input("Search")
-        for r in recipes:
-            if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
-                st.subheader(r["name"])
-                st.write(r["ingredients"])
-                st.write(r["steps"])
-                st.divider()
+# ================== AI PAGE ==================
+elif menu == "AI Assistant":
+    q = st.text_input("Example: I have bread and milk")
+    if q:
+        results = ai_suggest(q)
+        for r in results:
+            if st.button(f"• {r}"):
+                st.session_state.selected_recipe = r
+                st.rerun()
 
-    # ================= AI ASSISTANT PAGE =================
-    elif menu == "AI Assistant":
-        st.subheader("🤖 AI Recipe Assistant")
-        user_query = st.text_input("Example: I have bread and milk")
+# ================== FLOATING CHAT BUBBLE ==================
+components.html(
+    """
+    <style>
+    .bubble {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        background: #0d6efd;
+        border-radius: 50%;
+        color: white;
+        font-size: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 9999;
+    }
+    </style>
 
-        if user_query:
-            suggestions = ai_suggest(user_query)
-            if suggestions:
-                for name in suggestions:
-                    if st.button(f"• {name}", key=f"ai_page_{name}"):
-                        st.session_state.selected_recipe = name
-                        st.session_state.menu = "View Recipes"
-                        st.rerun()
-            else:
-                st.info("No related recipes found")
+    <div class="bubble" onclick="window.parent.postMessage('open_ai','*')">
+        💬
+    </div>
 
-    # ================= FLOATING AI (ADDED) =================
-    if st.session_state.ai_open:
-        st.markdown("---")
-        st.subheader("🤖 AI Assistant")
-        q = st.text_input("Ask here", key="ai_float_input")
+    <script>
+    window.addEventListener("message", (e) => {
+        if (e.data === "open_ai") {
+            window.parent.postMessage(
+                {type: "streamlit:setComponentValue", value: true},
+                "*"
+            );
+        }
+    });
+    </script>
+    """,
+    height=0
+)
 
-        if q:
-            s = ai_suggest(q)
-            for name in s:
-                if st.button(f"• {name}", key=f"ai_float_{name}"):
-                    st.session_state.selected_recipe = name
-                    st.session_state.menu = "View Recipes"
-                    st.rerun()
+# ================== BUBBLE AI ==================
+if st.session_state.ai_open:
+    st.subheader("💬 AI Assistant")
+    q = st.text_input("Ask here", key="bubble_input")
 
-    with st.container():
-        st.markdown('<div class="ai-float">', unsafe_allow_html=True)
-        if st.button("🤖", key="ai_float_btn"):
-            st.session_state.ai_open = not st.session_state.ai_open
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ================= RUN =================
-if st.session_state.logged_in:
-    main_app()
-else:
-    auth_page()
+    if q:
+        res = ai_suggest(q)
+        for r in res:
+            if st.button(f"• {r}", key=f"bubble_{r}"):
+                st.session_state.selected_recipe = r
+                st.session_state.ai_open = False
+                st.rerun()
