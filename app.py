@@ -1,20 +1,20 @@
 import streamlit as st
 import json
 import os
-import base64
 import hashlib
-import uuid
 
-from db import init_db, load_recipes, save_recipes
+from db import init_db, load_recipes
 from ai_bot import ai_suggest
 
 # ================= CONFIG =================
 USER_FILE = "users.json"
 IMAGE_FOLDER = "images"
 VIDEO_FOLDER = "videos"
+ASSETS_FOLDER = "assets"
 
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
+os.makedirs(ASSETS_FOLDER, exist_ok=True)
 
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
@@ -25,6 +25,12 @@ if "role" not in st.session_state:
     st.session_state.role = ""
 if "open_ai" not in st.session_state:
     st.session_state.open_ai = False
+
+# ================= IMAGE HELPER (FIX ONLY) =================
+def show_image(img_name, width=None):
+    path = os.path.join(ASSETS_FOLDER, img_name)
+    if os.path.exists(path):
+        st.image(path, width=width)
 
 # ================= SECURITY =================
 def hash_password(password):
@@ -45,9 +51,10 @@ def save_users(users):
 
 # ================= AUTH =================
 def auth_page():
+    show_image("login.png", width=300)  # FIXED
     st.title("🔐 Login")
-    users = load_users()
 
+    users = load_users()
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
     with tab1:
@@ -88,6 +95,7 @@ def auth_page():
 
 # ================= MAIN APP =================
 def main_app():
+    show_image("home.png", width=500)  # FIXED
     st.title("🍽️ Recipe Card")
 
     # ---------- FLOATING AI BUTTON ----------
@@ -109,9 +117,6 @@ def main_app():
         box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
         z-index: 9999;
     }
-    .ai-float-btn:hover {
-        background-color: #ff0000;
-    }
     </style>
 
     <div class="ai-float-btn" onclick="document.getElementById('aiBtn').click()">
@@ -119,7 +124,6 @@ def main_app():
     </div>
     """, unsafe_allow_html=True)
 
-    # ---------- FIXED LINE 147 ----------
     if st.button("AI", key="aiBtn"):
         st.session_state.open_ai = True
 
@@ -132,9 +136,6 @@ def main_app():
         st.session_state.logged_in = False
         st.rerun()
 
-    recipes = load_recipes()
-
-    # ---------- FIXED LINE 148 ----------
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
             "Menu",
@@ -151,7 +152,6 @@ def main_app():
     if menu != "AI Assistant":
         st.session_state.open_ai = False
 
-    # ================= AI =================
     if menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
         q = st.text_input("Ask about recipes")
