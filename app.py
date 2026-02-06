@@ -22,6 +22,8 @@ init_db()
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "selected_recipe" not in st.session_state:
+    st.session_state.selected_recipe = None
 if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
