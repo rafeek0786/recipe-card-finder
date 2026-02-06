@@ -7,10 +7,8 @@ import uuid
 
 from db import init_db, load_recipes, save_recipes
 
-
 # ================= CONFIG =================
 USER_FILE = "users.json"
-DATA_FILE = "recipes.json"
 IMAGE_FOLDER = "images"
 VIDEO_FOLDER = "videos"
 
@@ -18,7 +16,6 @@ os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(VIDEO_FOLDER, exist_ok=True)
 
 init_db()
-
 
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
@@ -69,17 +66,14 @@ def auth_page():
     users = load_users()
     tab1, tab2 = st.tabs(["Login", "Sign Up"])
 
-    # ---------- LOGIN ----------
     with tab1:
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
 
         if st.button("Login"):
             if u in users:
-                # ADMIN → plain text password (unchanged)
                 if users[u]["role"] == "admin":
                     valid = users[u]["password"] == p
-                # USER → hashed password
                 else:
                     valid = users[u]["password"] == hash_password(p)
 
@@ -93,7 +87,6 @@ def auth_page():
             else:
                 st.error("Invalid username or password")
 
-    # ---------- SIGNUP ----------
     with tab2:
         nu = st.text_input("New Username")
         np = st.text_input("New Password", type="password")
@@ -108,7 +101,7 @@ def auth_page():
                 st.error("All fields required")
             else:
                 users[nu] = {
-                    "password": hash_password(np),  # hash ONLY users
+                    "password": hash_password(np),
                     "role": "user"
                 }
                 save_users(users)
@@ -130,7 +123,6 @@ def main_app():
 
     recipes = load_recipes()
 
-    # ================= MENU =================
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
             "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
@@ -184,66 +176,18 @@ def main_app():
             save_recipes(recipes)
             st.success("Recipe added successfully")
 
-    # ================= ADMIN EDIT =================
-    elif menu == "View / Edit / Delete":
-        if not recipes:
-            st.info("No recipes available")
-            return
-
-        choice = st.selectbox("Select Recipe", [r["name"] for r in recipes])
-        r = next(x for x in recipes if x["name"] == choice)
-
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
-
-        col1, col2 = st.columns(2)
-        if col1.button("Update"):
-            save_recipes(recipes)
-            st.success("Updated")
-            st.rerun()
-
-        if col2.button("Delete"):
-            recipes.remove(r)
-            save_recipes(recipes)
-            st.warning("Deleted")
-            st.rerun()
-
-    # ================= MY RECIPES =================
-    elif menu == "My Recipes":
-        my = [r for r in recipes if r["owner"] == st.session_state.current_user]
-        if not my:
-            st.info("No recipes added by you")
-            return
-
-        choice = st.selectbox("Your Recipes", [r["name"] for r in my])
-        r = next(x for x in my if x["name"] == choice)
-
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
-
-        col1, col2 = st.columns(2)
-        if col1.button("Update"):
-            save_recipes(recipes)
-            st.success("Updated")
-            st.rerun()
-
-        if col2.button("Delete"):
-            recipes.remove(r)
-            save_recipes(recipes)
-            st.warning("Deleted")
-            st.rerun()
-
     # ================= VIEW RECIPES =================
     elif menu == "View Recipes":
         for r in recipes:
             st.subheader(r["name"])
             st.caption(f"By {r['owner']}")
-            if r["image"]:
+
+            if r["image"] and os.path.exists(r["image"]):
                 st.image(r["image"], width=300)
-            if r["video"]:
+
+            if r["video"] and os.path.exists(r["video"]):
                 st.video(r["video"])
+
             st.write(r["ingredients"])
             st.write(r["steps"])
             st.divider()
@@ -254,6 +198,13 @@ def main_app():
         for r in recipes:
             if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
                 st.subheader(r["name"])
+
+                if r["image"] and os.path.exists(r["image"]):
+                    st.image(r["image"], width=300)
+
+                if r["video"] and os.path.exists(r["video"]):
+                    st.video(r["video"])
+
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
