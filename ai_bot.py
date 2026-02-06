@@ -1,28 +1,35 @@
 from db import load_recipes
 import re
 
-def extract_ingredients(text: str):
-    """
-    Extract words like ingredients from user query
-    """
-    text = text.lower()
-    text = re.sub(r"[^a-zA-Z, ]", "", text)
-    ingredients = [i.strip() for i in text.split(",") if i.strip()]
-    return ingredients
+# Words that are NOT ingredients
+STOP_WORDS = {
+    "i", "have", "a", "an", "the", "with", "and", "or",
+    "to", "can", "cook", "make", "using", "want", "need",
+    "please", "suggest", "recipe", "recipes", "for"
+}
+
+def extract_ingredients_from_sentence(sentence: str):
+    sentence = sentence.lower()
+    sentence = re.sub(r"[^a-z ]", "", sentence)
+
+    words = sentence.split()
+    ingredients = [w for w in words if w not in STOP_WORDS]
+
+    return list(set(ingredients))
 
 
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
 
     if not recipes:
-        return "❌ No recipes found in the database yet."
+        return "❌ No recipes available in the database."
 
-    user_ingredients = extract_ingredients(user_query)
+    user_ingredients = extract_ingredients_from_sentence(user_query)
 
     if not user_ingredients:
-        return "❗ Please mention ingredients (example: bread, milk, egg)"
+        return "❗ I couldn't understand the ingredients. Try: *I have bread and milk*"
 
-    results = []
+    suggestions = []
 
     for r in recipes:
         recipe_ingredients = [
@@ -34,30 +41,23 @@ def ai_suggest(user_query: str) -> str:
         matched = set(user_ingredients) & set(recipe_ingredients)
         missing = set(recipe_ingredients) - set(user_ingredients)
 
-        match_score = len(matched) / max(len(recipe_ingredients), 1)
-
         if matched:
-            results.append({
-                "recipe": r,
-                "matched": matched,
-                "missing": missing,
-                "score": match_score
-            })
+            score = len(matched)
+            suggestions.append((score, r, matched, missing))
 
-    if not results:
-        return "😕 No recipes match your ingredients. Try adding more items."
+    if not suggestions:
+        return "😕 No matching recipes found. Try adding more ingredients."
 
-    results.sort(key=lambda x: x["score"], reverse=True)
+    suggestions.sort(reverse=True, key=lambda x: x[0])
 
-    response = "🤖 **AI Recipe Suggestions Based on Your Ingredients**\n\n"
+    response = "🤖 **Based on what you said, here are the best recipes:**\n\n"
 
-    for item in results[:3]:
-        r = item["recipe"]
+    for score, r, matched, missing in suggestions[:3]:
         response += f"""
 ### 🍽️ {r['name']}
-✅ **Matching ingredients:** {", ".join(item["matched"])}
-⚠️ **Missing ingredients:** {", ".join(item["missing"]) if item["missing"] else "None"}
-📌 **Tip:** You can prepare this recipe with slight adjustments.
+✅ **You have:** {", ".join(matched)}
+⚠️ **Missing:** {", ".join(missing) if missing else "Nothing"}
+💡 *You can cook this with minor adjustments.*
 ---
 """
 
