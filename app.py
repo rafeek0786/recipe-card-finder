@@ -6,6 +6,8 @@ import hashlib
 import uuid
 
 from db import init_db, load_recipes, save_recipes
+from ai_bot import ai_suggest
+
 
 # ================= CONFIG =================
 USER_FILE = "users.json"
@@ -126,12 +128,14 @@ def main_app():
     # ================= MENU =================
     if st.session_state.role == "admin":
         menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "View / Edit / Delete", "Search"]
-        )
+    "Menu", ["Add Recipe", "View / Edit / Delete", "Search", "AI Assistant"]
+)
+
     else:
         menu = st.sidebar.selectbox(
-            "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search"]
-        )
+    "Menu", ["Add Recipe", "My Recipes", "View Recipes", "Search", "AI Assistant"]
+)
+
 
     # ================= ADD RECIPE =================
     if menu == "Add Recipe":
@@ -272,6 +276,19 @@ def main_app():
                 st.write(r["ingredients"])
                 st.write(r["steps"])
                 st.divider()
+
+    # ================= AI ASSISTANT =================
+    elif menu == "AI Assistant":
+        st.subheader("🤖 AI Recipe Assistant")
+        st.caption("Ask questions based on your recipe database")
+
+        user_query = st.text_input("Ask me anything about your recipes")
+
+        if user_query:
+            with st.spinner("Thinking..."):
+                answer = ai_suggest(user_query)
+                st.markdown(answer)
+
 
 # ================= RUN =================
 if st.session_state.logged_in:
