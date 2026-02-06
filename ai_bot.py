@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 STOP_WORDS = {
     "i", "have", "a", "an", "the", "with", "and", "or",
     "to", "can", "cook", "make", "using", "want", "need",
-    "please", "suggest", "recipe", "recipes", "for"
+    "please", "suggest", "recipe", "recipes", "for", "something"
 }
 
 SYNONYMS = {
@@ -23,64 +23,58 @@ def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
 def expand_synonyms(word):
-    for key, values in SYNONYMS.items():
-        if word == key or word in values:
-            return [key] + values
+    for k, v in SYNONYMS.items():
+        if word == k or word in v:
+            return [k] + v
     return [word]
 
-def extract_user_ingredients(sentence):
+def extract_user_ingredients(sentence: str):
     sentence = re.sub(r"[^a-z ]", "", sentence.lower())
     words = sentence.split()
 
     ingredients = []
-    for word in words:
-        if word not in STOP_WORDS:
-            ingredients.extend(expand_synonyms(normalize(word)))
+    for w in words:
+        if w not in STOP_WORDS:
+            ingredients.extend(expand_synonyms(normalize(w)))
 
     return list(set(ingredients))
 
-def extract_recipe_ingredients(text):
-    return [normalize(line) for line in text.splitlines() if line.strip()]
+def extract_recipe_ingredients(ingredients_text: str):
+    return [normalize(line) for line in ingredients_text.splitlines() if line.strip()]
 
-def ai_suggest(user_query):
+def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
 
     if not recipes:
         return "No recipes available."
 
-    user_ingredients = extract_user_ingredients(user_query)
+    user_ing = extract_user_ingredients(user_query)
 
-    if not user_ingredients:
-        return "Please specify available ingredients."
+    if not user_ing:
+        return "Please tell me what ingredients you have."
 
-    results = []
+    matches = []
 
-    for recipe in recipes:
-        recipe_ingredients = extract_recipe_ingredients(recipe["ingredients"])
+    for r in recipes:
+        recipe_ing = extract_recipe_ingredients(r["ingredients"])
         score = 0
-        matched = []
 
-        for ui in user_ingredients:
-            for ri in recipe_ingredients:
-                if ui in ri or similarity(ui, ri) > 0.7:
+        for ui in user_ing:
+            for ri in recipe_ing:
+                if ui in ri or ri in ui or similarity(ui, ri) > 0.7:
                     score += 1
-                    matched.append(ui)
 
         if score > 0:
-            results.append({
-                "name": recipe["name"],
-                "score": score,
-                "matched": list(set(matched))
-            })
+            matches.append((score, r["name"]))
 
-    if not results:
-        return "No matching recipes found."
+    if not matches:
+        return "No related recipes found."
 
-    results.sort(key=lambda x: x["score"], reverse=True)
+    matches.sort(reverse=True, key=lambda x: x[0])
 
-    response = "✨ **AI Suggested Recipes**\n\n"
-    for r in results[:5]:
-        response += f"• **{r['name']}**\n"
-        response += f"  _Matched ingredients:_ {', '.join(r['matched'])}\n\n"
+    # 🔒 OLD OUTPUT STYLE (UNCHANGED)
+    response = "✨ Suggested Recipes\n\n"
+    for _, name in matches[:5]:
+        response += f"• {name}\n\n"
 
     return response.strip()
