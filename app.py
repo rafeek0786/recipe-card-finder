@@ -194,18 +194,21 @@ def main_app():
         if r["video"] and os.path.exists(r["video"]):
             st.video(r["video"])
 
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
+        new_name = st.text_input("Name", r["name"])
+        new_ing = st.text_area("Ingredients", r["ingredients"])
+        new_steps = st.text_area("Steps", r["steps"])
 
         col1, col2 = st.columns(2)
         if col1.button("Update"):
+            r["name"] = new_name
+            r["ingredients"] = new_ing
+            r["steps"] = new_steps
             save_recipes(recipes)
             st.success("Updated")
             st.rerun()
 
         if col2.button("Delete"):
-            recipes.remove(r)
+            recipes[:] = [x for x in recipes if x["name"] != r["name"]]
             save_recipes(recipes)
             st.warning("Deleted")
             st.rerun()
@@ -226,18 +229,21 @@ def main_app():
         if r["video"] and os.path.exists(r["video"]):
             st.video(r["video"])
 
-        r["name"] = st.text_input("Name", r["name"])
-        r["ingredients"] = st.text_area("Ingredients", r["ingredients"])
-        r["steps"] = st.text_area("Steps", r["steps"])
+        new_name = st.text_input("Name", r["name"])
+        new_ing = st.text_area("Ingredients", r["ingredients"])
+        new_steps = st.text_area("Steps", r["steps"])
 
         col1, col2 = st.columns(2)
         if col1.button("Update"):
+            r["name"] = new_name
+            r["ingredients"] = new_ing
+            r["steps"] = new_steps
             save_recipes(recipes)
             st.success("Updated")
             st.rerun()
 
         if col2.button("Delete"):
-            recipes.remove(r)
+            recipes[:] = [x for x in recipes if x["name"] != r["name"]]
             save_recipes(recipes)
             st.warning("Deleted")
             st.rerun()
