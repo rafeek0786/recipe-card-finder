@@ -33,7 +33,6 @@ def fix_spelling(word):
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
-# ---------------- INTENT DETECTION ----------------
 def detect_intent(query: str) -> str:
     q = query.lower()
 
@@ -45,7 +44,6 @@ def detect_intent(query: str) -> str:
 
     return "suggest"
 
-# ---------------- EXTRACTION ----------------
 def extract_user_ingredients(sentence: str):
     sentence = re.sub(r"[^a-z ]", "", sentence.lower())
     words = sentence.split()
@@ -58,7 +56,6 @@ def extract_user_ingredients(sentence: str):
 def extract_recipe_ingredients(text: str):
     return [line.strip() for line in text.splitlines() if line.strip()]
 
-# ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
     if not recipes:
