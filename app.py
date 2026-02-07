@@ -275,7 +275,7 @@ def main_app():
 
         with st.form("ai_form", clear_on_submit=False):
             user_query = st.text_input("Ask me anything about your recipes")
-            submitted = st.form_submit_button("Enter")
+            submitted = st.form_submit_button("")
 
         if submitted and user_query:
             with st.spinner("Thinking..."):
