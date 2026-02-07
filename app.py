@@ -183,8 +183,9 @@ def main_app():
             save_recipes(recipes)
             st.success("Recipe added successfully")
 
-    # ================= VIEW / EDIT / DELETE & MY RECIPES =================
+    # ================= VIEW / EDIT / DELETE + MY RECIPES =================
     elif menu in ["View / Edit / Delete", "My Recipes"]:
+
         data = recipes if menu == "View / Edit / Delete" else [
             r for r in recipes if r["owner"] == st.session_state.current_user
         ]
@@ -204,6 +205,7 @@ def main_app():
         choice = st.selectbox("Select Recipe", [r["name"] for r in data])
         r = next(x for x in recipes if x["name"] == choice)
 
+        # ✅ SHOW IMAGE & VIDEO (FIXED)
         if r["image"] and os.path.exists(r["image"]):
             st.image(r["image"], width=300)
 
@@ -268,16 +270,11 @@ def main_app():
             if not found:
                 st.warning("No matching recipes found")
 
-    # ================= AI ASSISTANT (ENTER ONLY) =================
+    # ================= AI ASSISTANT =================
     elif menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
-        st.caption("Type your question and press Enter")
-
-        with st.form("ai_form", clear_on_submit=False):
-            user_query = st.text_input("Ask me anything about your recipes")
-            submitted = st.form_submit_button("")
-
-        if submitted and user_query:
+        user_query = st.text_input("Ask me anything about your recipes")
+        if st.button("Ask AI") and user_query:
             with st.spinner("Thinking..."):
                 st.markdown(ai_suggest(user_query))
 
