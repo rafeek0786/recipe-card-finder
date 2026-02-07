@@ -18,11 +18,11 @@ SYNONYMS = {
     "bread": ["toast"]
 }
 
-# ✅ SPELLING FIX (ADDED – DOES NOT CHANGE LOGIC)
 SPELLING_FIX = {
     "tamato": "tomato",
     "tomoto": "tomato",
-    "tommato": "tomato"
+    "tommato": "tomato",
+    "briyani": "biryani"
 }
 
 def normalize(text):
@@ -34,7 +34,7 @@ def fix_spelling(word):
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
-# ---------------- INTENT DETECTION ----------------
+# ---------------- INTENT ----------------
 def detect_intent(query: str) -> str:
     q = query.lower()
 
@@ -68,11 +68,16 @@ def ai_suggest(user_query: str) -> str:
     intent = detect_intent(user_query)
     query_norm = normalize(user_query)
 
+    # ✅ DIRECT NAME MATCH (FIX)
+    for r in recipes:
+        name_norm = normalize(r["name"])
+        if name_norm == query_norm or similarity(name_norm, query_norm) > 0.7:
+            return f"### 🍽️ {r['name']}\n\n{r['ingredients']}\n\n{r['steps']}"
+
     # ✅ INGREDIENTS MODE
     if intent == "ingredients":
         for r in recipes:
-            name_norm = normalize(r["name"])
-            if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
+            if similarity(normalize(r["name"]), query_norm) > 0.6:
                 return f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
 
         return "Sorry, I couldn't find the ingredients for that recipe."
@@ -80,13 +85,12 @@ def ai_suggest(user_query: str) -> str:
     # ✅ HOW-TO MODE
     if intent == "how_to":
         for r in recipes:
-            name_norm = normalize(r["name"])
-            if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
+            if similarity(normalize(r["name"]), query_norm) > 0.6:
                 return f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
 
         return "Sorry, I couldn't find the cooking steps for that recipe."
 
-    # ✅ SUGGEST MODE
+    # ✅ SUGGEST MODE (INGREDIENT BASED)
     user_ing = extract_user_ingredients(user_query)
     matches = []
 
