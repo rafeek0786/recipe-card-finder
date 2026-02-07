@@ -22,7 +22,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# LOAD all recipes
 def load_recipes():
     conn = get_connection()
     cur = conn.cursor()
@@ -45,7 +44,6 @@ def load_recipes():
         })
     return recipes
 
-# SAVE ALL recipes (matches app.py exactly)
 def save_recipes(recipes):
     conn = get_connection()
     cur = conn.cursor()
@@ -67,7 +65,6 @@ def save_recipes(recipes):
     conn.commit()
     conn.close()
 
-# DELETE single recipe (safe)
 def delete_recipe(name):
     conn = get_connection()
     cur = conn.cursor()
