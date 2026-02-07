@@ -287,12 +287,12 @@ def main_app():
         st.caption("Ask questions based on your recipe database")
 
         user_query = st.text_input("Ask me anything about your recipes")
+        ask = st.button("Ask AI")
 
-        if user_query:
+        if ask and user_query:
             with st.spinner("Thinking..."):
                 answer = ai_suggest(user_query)
                 st.markdown(answer)
-
 
 # ================= RUN =================
 if st.session_state.logged_in:
