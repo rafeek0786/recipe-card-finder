@@ -67,7 +67,6 @@ def ai_suggest(user_query: str) -> str:
     intent = detect_intent(user_query)
     query_norm = normalize(user_query)
 
-    # INGREDIENTS MODE
     if intent == "ingredients":
         for r in recipes:
             name_norm = normalize(r["name"])
@@ -75,7 +74,6 @@ def ai_suggest(user_query: str) -> str:
                 return f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
         return "Sorry, I couldn't find the ingredients for that recipe."
 
-    # HOW-TO MODE
     if intent == "how_to":
         for r in recipes:
             name_norm = normalize(r["name"])
@@ -83,7 +81,6 @@ def ai_suggest(user_query: str) -> str:
                 return f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
         return "Sorry, I couldn't find the cooking steps for that recipe."
 
-    # SUGGEST MODE
     user_ing = extract_user_ingredients(user_query)
     matches = []
 
@@ -95,10 +92,6 @@ def ai_suggest(user_query: str) -> str:
             for ri in recipe_ing:
                 if normalize(ui) in normalize(ri):
                     score += 1
-                else:
-                    for syn in SYNONYMS.get(ui, []):
-                        if normalize(syn) in normalize(ri):
-                            score += 1
 
         if score > 0:
             matches.append((score, r["name"]))
@@ -108,8 +101,8 @@ def ai_suggest(user_query: str) -> str:
 
     matches.sort(reverse=True, key=lambda x: x[0])
 
-    response = "✨ Suggested Recipes (Click to view)\n\n"
+    response = "✨ Suggested Recipes\n\n"
     for _, name in matches[:5]:
-        response += f"[{name}]\n"
+        response += f"• {name}\n\n"
 
     return response.strip()
