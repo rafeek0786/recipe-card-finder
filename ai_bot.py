@@ -21,8 +21,7 @@ SYNONYMS = {
 SPELLING_FIX = {
     "tamato": "tomato",
     "tomoto": "tomato",
-    "tommato": "tomato",
-    "briyani": "biryani"
+    "tommato": "tomato"
 }
 
 def normalize(text):
@@ -66,7 +65,7 @@ def ai_suggest(user_query: str) -> str:
         return "No recipes available."
 
     intent = detect_intent(user_query)
-    query_norm = normalize(fix_spelling(user_query))
+    query_norm = normalize(user_query)
 
     # INGREDIENTS MODE
     if intent == "ingredients":
@@ -96,6 +95,10 @@ def ai_suggest(user_query: str) -> str:
             for ri in recipe_ing:
                 if normalize(ui) in normalize(ri):
                     score += 1
+                else:
+                    for syn in SYNONYMS.get(ui, []):
+                        if normalize(syn) in normalize(ri):
+                            score += 1
 
         if score > 0:
             matches.append((score, r["name"]))
@@ -105,8 +108,8 @@ def ai_suggest(user_query: str) -> str:
 
     matches.sort(reverse=True, key=lambda x: x[0])
 
-    response = "✨ Suggested Recipes\n\n"
+    response = "✨ Suggested Recipes (Click to view)\n\n"
     for _, name in matches[:5]:
-        response += f"• {name}\n\n"
+        response += f"[{name}]\n"
 
     return response.strip()
