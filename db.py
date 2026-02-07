@@ -10,7 +10,8 @@ def init_db():
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS recipes (
-            name TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
             ingredients TEXT,
             steps TEXT,
             image TEXT,
@@ -21,10 +22,14 @@ def init_db():
     conn.commit()
     conn.close()
 
+# LOAD recipes (no deletion)
 def load_recipes():
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT name, ingredients, steps, image, video, owner FROM recipes")
+    cur.execute("""
+        SELECT name, ingredients, steps, image, video, owner 
+        FROM recipes
+    """)
     rows = cur.fetchall()
     conn.close()
 
@@ -40,24 +45,29 @@ def load_recipes():
         })
     return recipes
 
-def save_recipes(recipes):
+# SAVE ONE recipe safely (no erase)
+def save_recipe(recipe):
     conn = get_connection()
     cur = conn.cursor()
+    cur.execute("""
+        INSERT OR REPLACE INTO recipes 
+        (name, ingredients, steps, image, video, owner)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        recipe["name"],
+        recipe["ingredients"],
+        recipe["steps"],
+        recipe.get("image", ""),
+        recipe.get("video", ""),
+        recipe.get("owner", "")
+    ))
+    conn.commit()
+    conn.close()
 
-    cur.execute("DELETE FROM recipes")
-
-    for r in recipes:
-        cur.execute("""
-            INSERT INTO recipes (name, ingredients, steps, image, video, owner)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            r["name"],
-            r["ingredients"],
-            r["steps"],
-            r["image"],
-            r["video"],
-            r["owner"]
-        ))
-
+# DELETE only selected recipe
+def delete_recipe(name):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM recipes WHERE name = ?", (name,))
     conn.commit()
     conn.close()
