@@ -183,9 +183,14 @@ def main_app():
             save_recipes(recipes)
             st.success("Recipe added successfully")
 
-    # ================= ADMIN VIEW / EDIT / DELETE =================
-    elif menu == "View / Edit / Delete":
-        if not recipes:
+    # ================= VIEW / EDIT / DELETE =================
+    elif menu in ["View / Edit / Delete", "My Recipes"]:
+
+        data = recipes if menu == "View / Edit / Delete" else [
+            r for r in recipes if r["owner"] == st.session_state.current_user
+        ]
+
+        if not data:
             st.info("No recipes available")
             return
 
@@ -197,7 +202,7 @@ def main_app():
             st.success("🗑️ Deleted successfully")
             st.session_state.delete_msg = False
 
-        choice = st.selectbox("Select Recipe", [r["name"] for r in recipes])
+        choice = st.selectbox("Select Recipe", [r["name"] for r in data])
         r = next(x for x in recipes if x["name"] == choice)
 
         new_name = st.text_input("Name", r["name"])
@@ -219,42 +224,32 @@ def main_app():
             st.session_state.delete_msg = True
             st.rerun()
 
-    # ================= MY RECIPES =================
-    elif menu == "My Recipes":
-        my = [r for r in recipes if r["owner"] == st.session_state.current_user]
-        if not my:
-            st.info("No recipes added by you")
-            return
+    # ================= VIEW RECIPES =================
+    elif menu == "View Recipes":
+        for r in recipes:
+            st.subheader(r["name"])
+            st.caption(f"By {r['owner']}")
+            st.write(r["ingredients"])
+            st.write(r["steps"])
+            st.divider()
 
-        if st.session_state.update_msg:
-            st.success("✅ Updated successfully")
-            st.session_state.update_msg = False
+    # ================= SEARCH =================
+    elif menu == "Search":
+        q = st.text_input("Search recipes")
+        search_btn = st.button("Search")
 
-        if st.session_state.delete_msg:
-            st.success("🗑️ Deleted successfully")
-            st.session_state.delete_msg = False
+        if search_btn and q:
+            found = False
+            for r in recipes:
+                if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
+                    found = True
+                    st.subheader(r["name"])
+                    st.write(r["ingredients"])
+                    st.write(r["steps"])
+                    st.divider()
 
-        choice = st.selectbox("Your Recipes", [r["name"] for r in my])
-        r = next(x for x in my if x["name"] == choice)
-
-        new_name = st.text_input("Name", r["name"])
-        new_ing = st.text_area("Ingredients", r["ingredients"])
-        new_steps = st.text_area("Steps", r["steps"])
-
-        col1, col2 = st.columns(2)
-        if col1.button("Update"):
-            r["name"] = new_name
-            r["ingredients"] = new_ing
-            r["steps"] = new_steps
-            save_recipes(recipes)
-            st.session_state.update_msg = True
-            st.rerun()
-
-        if col2.button("Delete"):
-            recipes[:] = [x for x in recipes if x["name"] != r["name"]]
-            save_recipes(recipes)
-            st.session_state.delete_msg = True
-            st.rerun()
+            if not found:
+                st.warning("No matching recipes found")
 
     # ================= AI ASSISTANT =================
     elif menu == "AI Assistant":
