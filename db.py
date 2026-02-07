@@ -48,9 +48,13 @@ def save_recipes(recipes):
     conn = get_connection()
     cur = conn.cursor()
 
+    # 🔴 CRITICAL FIX: clear table first
+    cur.execute("DELETE FROM recipes")
+
+    # Reinsert current state
     for recipe in recipes:
         cur.execute("""
-            INSERT OR REPLACE INTO recipes
+            INSERT INTO recipes
             (name, ingredients, steps, image, video, owner)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
