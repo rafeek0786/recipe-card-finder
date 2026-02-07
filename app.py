@@ -183,7 +183,7 @@ def main_app():
             save_recipes(recipes)
             st.success("Recipe added successfully")
 
-    # ================= VIEW / EDIT / DELETE =================
+    # ================= VIEW / EDIT / DELETE + MY RECIPES =================
     elif menu in ["View / Edit / Delete", "My Recipes"]:
 
         data = recipes if menu == "View / Edit / Delete" else [
@@ -204,6 +204,13 @@ def main_app():
 
         choice = st.selectbox("Select Recipe", [r["name"] for r in data])
         r = next(x for x in recipes if x["name"] == choice)
+
+        # ✅ SHOW IMAGE & VIDEO (FIXED)
+        if r["image"] and os.path.exists(r["image"]):
+            st.image(r["image"], width=300)
+
+        if r["video"] and os.path.exists(r["video"]):
+            st.video(r["video"])
 
         new_name = st.text_input("Name", r["name"])
         new_ing = st.text_area("Ingredients", r["ingredients"])
@@ -229,6 +236,13 @@ def main_app():
         for r in recipes:
             st.subheader(r["name"])
             st.caption(f"By {r['owner']}")
+
+            if r["image"] and os.path.exists(r["image"]):
+                st.image(r["image"], width=300)
+
+            if r["video"] and os.path.exists(r["video"]):
+                st.video(r["video"])
+
             st.write(r["ingredients"])
             st.write(r["steps"])
             st.divider()
@@ -236,14 +250,19 @@ def main_app():
     # ================= SEARCH =================
     elif menu == "Search":
         q = st.text_input("Search recipes")
-        search_btn = st.button("Search")
-
-        if search_btn and q:
+        if st.button("Search") and q:
             found = False
             for r in recipes:
                 if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
                     found = True
                     st.subheader(r["name"])
+
+                    if r["image"] and os.path.exists(r["image"]):
+                        st.image(r["image"], width=300)
+
+                    if r["video"] and os.path.exists(r["video"]):
+                        st.video(r["video"])
+
                     st.write(r["ingredients"])
                     st.write(r["steps"])
                     st.divider()
