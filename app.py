@@ -26,6 +26,10 @@ if "current_user" not in st.session_state:
     st.session_state.current_user = ""
 if "role" not in st.session_state:
     st.session_state.role = ""
+if "update_msg" not in st.session_state:
+    st.session_state.update_msg = False
+if "delete_msg" not in st.session_state:
+    st.session_state.delete_msg = False
 
 # ================= BACKGROUND =================
 def set_bg(image):
@@ -185,14 +189,16 @@ def main_app():
             st.info("No recipes available")
             return
 
+        if st.session_state.update_msg:
+            st.success("✅ Updated successfully")
+            st.session_state.update_msg = False
+
+        if st.session_state.delete_msg:
+            st.success("🗑️ Deleted successfully")
+            st.session_state.delete_msg = False
+
         choice = st.selectbox("Select Recipe", [r["name"] for r in recipes])
         r = next(x for x in recipes if x["name"] == choice)
-
-        if r["image"] and os.path.exists(r["image"]):
-            st.image(r["image"], width=300)
-
-        if r["video"] and os.path.exists(r["video"]):
-            st.video(r["video"])
 
         new_name = st.text_input("Name", r["name"])
         new_ing = st.text_area("Ingredients", r["ingredients"])
@@ -204,13 +210,13 @@ def main_app():
             r["ingredients"] = new_ing
             r["steps"] = new_steps
             save_recipes(recipes)
-            st.success("Updated")
+            st.session_state.update_msg = True
             st.rerun()
 
         if col2.button("Delete"):
             recipes[:] = [x for x in recipes if x["name"] != r["name"]]
             save_recipes(recipes)
-            st.warning("Deleted")
+            st.session_state.delete_msg = True
             st.rerun()
 
     # ================= MY RECIPES =================
@@ -220,14 +226,16 @@ def main_app():
             st.info("No recipes added by you")
             return
 
+        if st.session_state.update_msg:
+            st.success("✅ Updated successfully")
+            st.session_state.update_msg = False
+
+        if st.session_state.delete_msg:
+            st.success("🗑️ Deleted successfully")
+            st.session_state.delete_msg = False
+
         choice = st.selectbox("Your Recipes", [r["name"] for r in my])
         r = next(x for x in my if x["name"] == choice)
-
-        if r["image"] and os.path.exists(r["image"]):
-            st.image(r["image"], width=300)
-
-        if r["video"] and os.path.exists(r["video"]):
-            st.video(r["video"])
 
         new_name = st.text_input("Name", r["name"])
         new_ing = st.text_area("Ingredients", r["ingredients"])
@@ -239,60 +247,23 @@ def main_app():
             r["ingredients"] = new_ing
             r["steps"] = new_steps
             save_recipes(recipes)
-            st.success("Updated")
+            st.session_state.update_msg = True
             st.rerun()
 
         if col2.button("Delete"):
             recipes[:] = [x for x in recipes if x["name"] != r["name"]]
             save_recipes(recipes)
-            st.warning("Deleted")
+            st.session_state.delete_msg = True
             st.rerun()
-
-    # ================= VIEW RECIPES =================
-    elif menu == "View Recipes":
-        for r in recipes:
-            st.subheader(r["name"])
-            st.caption(f"By {r['owner']}")
-
-            if r["image"] and os.path.exists(r["image"]):
-                st.image(r["image"], width=300)
-
-            if r["video"] and os.path.exists(r["video"]):
-                st.video(r["video"])
-
-            st.write(r["ingredients"])
-            st.write(r["steps"])
-            st.divider()
-
-    # ================= SEARCH =================
-    elif menu == "Search":
-        q = st.text_input("Search")
-        for r in recipes:
-            if q.lower() in (r["name"] + r["ingredients"] + r["steps"]).lower():
-                st.subheader(r["name"])
-
-                if r["image"] and os.path.exists(r["image"]):
-                    st.image(r["image"], width=300)
-
-                if r["video"] and os.path.exists(r["video"]):
-                    st.video(r["video"])
-
-                st.write(r["ingredients"])
-                st.write(r["steps"])
-                st.divider()
 
     # ================= AI ASSISTANT =================
     elif menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
-        st.caption("Ask questions based on your recipe database")
-
         user_query = st.text_input("Ask me anything about your recipes")
-        ask = st.button("Ask AI")
-
-        if ask and user_query:
+        if st.button("Ask AI") and user_query:
             with st.spinner("Thinking..."):
-                answer = ai_suggest(user_query)
-                st.markdown(answer)
+                st.markdown(ai_suggest(user_query))
+
 
 # ================= RUN =================
 if st.session_state.logged_in:
