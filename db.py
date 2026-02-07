@@ -22,12 +22,12 @@ def init_db():
     conn.commit()
     conn.close()
 
-# LOAD recipes (no deletion)
+# LOAD all recipes
 def load_recipes():
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
-        SELECT name, ingredients, steps, image, video, owner 
+        SELECT name, ingredients, steps, image, video, owner
         FROM recipes
     """)
     rows = cur.fetchall()
@@ -45,26 +45,29 @@ def load_recipes():
         })
     return recipes
 
-# SAVE ONE recipe safely (no erase)
-def save_recipe(recipe):
+# SAVE ALL recipes (matches app.py exactly)
+def save_recipes(recipes):
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
-        INSERT OR REPLACE INTO recipes 
-        (name, ingredients, steps, image, video, owner)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        recipe["name"],
-        recipe["ingredients"],
-        recipe["steps"],
-        recipe.get("image", ""),
-        recipe.get("video", ""),
-        recipe.get("owner", "")
-    ))
+
+    for recipe in recipes:
+        cur.execute("""
+            INSERT OR REPLACE INTO recipes
+            (name, ingredients, steps, image, video, owner)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            recipe["name"],
+            recipe["ingredients"],
+            recipe["steps"],
+            recipe.get("image", ""),
+            recipe.get("video", ""),
+            recipe.get("owner", "")
+        ))
+
     conn.commit()
     conn.close()
 
-# DELETE only selected recipe
+# DELETE single recipe (safe)
 def delete_recipe(name):
     conn = get_connection()
     cur = conn.cursor()
