@@ -44,27 +44,22 @@ def load_recipes():
         })
     return recipes
 
-def save_recipes(recipes):
+def save_recipe(recipe):
     conn = get_connection()
     cur = conn.cursor()
 
-    # 🔴 CRITICAL FIX: clear table first
-    cur.execute("DELETE FROM recipes")
-
-    # Reinsert current state
-    for recipe in recipes:
-        cur.execute("""
-            INSERT INTO recipes
-            (name, ingredients, steps, image, video, owner)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (
-            recipe["name"],
-            recipe["ingredients"],
-            recipe["steps"],
-            recipe.get("image", ""),
-            recipe.get("video", ""),
-            recipe.get("owner", "")
-        ))
+    cur.execute("""
+        INSERT OR REPLACE INTO recipes
+        (name, ingredients, steps, image, video, owner)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        recipe["name"],
+        recipe["ingredients"],
+        recipe["steps"],
+        recipe.get("image", ""),
+        recipe.get("video", ""),
+        recipe.get("owner", "")
+    ))
 
     conn.commit()
     conn.close()
