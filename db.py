@@ -44,10 +44,10 @@ def load_recipes():
         })
     return recipes
 
+# ✅ SAVE SINGLE RECIPE (PERMANENT)
 def save_recipe(recipe):
     conn = get_connection()
     cur = conn.cursor()
-
     cur.execute("""
         INSERT OR REPLACE INTO recipes
         (name, ingredients, steps, image, video, owner)
@@ -60,9 +60,13 @@ def save_recipe(recipe):
         recipe.get("video", ""),
         recipe.get("owner", "")
     ))
-
     conn.commit()
     conn.close()
+
+# ✅ KEEP OLD LOGIC – REQUIRED BY app.py
+def save_recipes(recipes):
+    for recipe in recipes:
+        save_recipe(recipe)
 
 def delete_recipe(name):
     conn = get_connection()
