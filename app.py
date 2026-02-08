@@ -1,12 +1,4 @@
 import streamlit as st
-
-# ================= PAGE CONFIG (ICON ADDED) =================
-st.set_page_config(
-    page_title="Recipe Card Finder",
-    page_icon="assets/app_icon.png",
-    layout="wide"
-)
-
 import json
 import os
 import base64
@@ -82,7 +74,7 @@ def auth_page():
 
     with tab1:
         u = st.text_input("Username")
-        p = st.text (input("Password", type="password"))
+        p = st.text_input("Password", type="password")
 
         if st.button("Login"):
             if u in users:
@@ -276,7 +268,7 @@ def main_app():
             if not found:
                 st.warning("No matching recipes found")
 
-    # ================= AI ASSISTANT =================
+    # ================= AI ASSISTANT (ENTER ONLY) =================
     elif menu == "AI Assistant":
         st.subheader("🤖 AI Recipe Assistant")
         st.caption("Type your question and press Enter")
