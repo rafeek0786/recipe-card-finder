@@ -44,7 +44,7 @@ def load_recipes():
         })
     return recipes
 
-# ✅ SAVE SINGLE RECIPE (PERMANENT)
+# ---------------- PERMANENT SAVE ----------------
 def save_recipe(recipe):
     conn = get_connection()
     cur = conn.cursor()
@@ -63,10 +63,40 @@ def save_recipe(recipe):
     conn.commit()
     conn.close()
 
-# ✅ KEEP OLD LOGIC – REQUIRED BY app.py
+# ---------------- SYNC DATABASE (FIX DELETE) ----------------
 def save_recipes(recipes):
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # 1️⃣ Get existing recipe names in DB
+    cur.execute("SELECT name FROM recipes")
+    db_names = {row[0] for row in cur.fetchall()}
+
+    # 2️⃣ Names coming from app
+    app_names = {r["name"] for r in recipes}
+
+    # 3️⃣ Delete removed recipes
+    to_delete = db_names - app_names
+    for name in to_delete:
+        cur.execute("DELETE FROM recipes WHERE name = ?", (name,))
+
+    # 4️⃣ Insert / Update current recipes
     for recipe in recipes:
-        save_recipe(recipe)
+        cur.execute("""
+            INSERT OR REPLACE INTO recipes
+            (name, ingredients, steps, image, video, owner)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            recipe["name"],
+            recipe["ingredients"],
+            recipe["steps"],
+            recipe.get("image", ""),
+            recipe.get("video", ""),
+            recipe.get("owner", "")
+        ))
+
+    conn.commit()
+    conn.close()
 
 def delete_recipe(name):
     conn = get_connection()
