@@ -12,7 +12,8 @@ def ai_suggest(user_query: str) -> str:
         return "Hugging Face API key not configured."
 
     HF_API_KEY = st.secrets["HF_API_KEY"]
-    MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
+    MODEL = "google/flan-t5-large"
+
 
     recipes = load_recipes()
     if not recipes:
