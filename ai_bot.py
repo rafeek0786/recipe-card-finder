@@ -1,3 +1,4 @@
+
 from db import load_recipes
 
 def ai_suggest(user_query: str) -> str:
@@ -7,13 +8,14 @@ def ai_suggest(user_query: str) -> str:
     except Exception:
         return "Required libraries missing."
 
-    # 🔐 Check API key
+    # 🔐 Check Hugging Face API key
     if "HF_API_KEY" not in st.secrets:
         return "Hugging Face API key not configured."
 
     HF_API_KEY = st.secrets["HF_API_KEY"]
-    MODEL = "google/flan-t5-large"
 
+    # ✅ Light & stable free model
+    MODEL = "google/flan-t5-large"
 
     recipes = load_recipes()
     if not recipes:
@@ -28,12 +30,30 @@ def ai_suggest(user_query: str) -> str:
             f"---\n"
         )
 
-    prompt = (
-        "You are a helpful recipe assistant.\n\n"
-        "Answer ONLY using the recipes below.\n\n"
-        f"User Question:\n{user_query}\n\n"
-        f"Recipes:\n{recipe_text}"
-    )
+    # 🧠 CHATGPT-LIKE PROMPT (FRIENDLY + STEP-BY-STEP)
+    prompt = f"""
+You are a friendly, helpful assistant like ChatGPT.
+
+Answer in a clear and human way:
+- Explain step by step
+- Use simple language
+- Be polite and supportive
+- Format neatly using bullet points or numbering
+- Use light emojis if helpful 🙂
+
+IMPORTANT RULES:
+- Use ONLY the recipes given below
+- Do NOT invent new recipes
+- Do NOT add ingredients not listed
+
+User question:
+{user_query}
+
+Available recipes:
+{recipe_text}
+
+Give the answer as if you are teaching a beginner.
+"""
 
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}"
@@ -52,7 +72,7 @@ def ai_suggest(user_query: str) -> str:
         if isinstance(result, list):
             return result[0].get("generated_text", "No response from AI.")
 
-        return "AI is busy. Try again."
+        return "AI is busy. Try again later."
 
     except Exception:
-        return "Hugging Face AI is busy. Try again later."
+        return "AI is busy. Try again later."
