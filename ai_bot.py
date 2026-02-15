@@ -1,78 +1,115 @@
-
 from db import load_recipes
+import re
+from difflib import SequenceMatcher
 
+STOP_WORDS = {
+    "i", "have", "a", "an", "the", "with", "and", "or",
+    "to", "can", "cook", "make", "using", "want", "need",
+    "please", "suggest", "recipe", "recipes", "for", "something",
+    "what", "is", "are", "of"
+}
+
+SYNONYMS = {
+    "rice": ["basmati", "rawrice"],
+    "tomato": ["tomatoes"],
+    "chilli": ["chili"],
+    "potato": ["potatoes"],
+    "egg": ["eggs"],
+    "bread": ["toast"]
+}
+
+SPELLING_FIX = {
+    "tamato": "tomato",
+    "tomoto": "tomato",
+    "tommato": "tomato"
+}
+
+def normalize(text):
+    return re.sub(r"[^a-z]", "", text.lower())
+
+def fix_spelling(word):
+    return SPELLING_FIX.get(word, word)
+
+def similarity(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+# ---------------- INTENT DETECTION ----------------
+def detect_intent(query: str) -> str:
+    q = query.lower()
+
+    if any(w in q for w in ["how to", "how do", "steps", "method"]):
+        return "how_to"
+
+    if any(w in q for w in ["ingredient", "ingredients", "contains", "what is in"]):
+        return "ingredients"
+
+    return "suggest"
+
+# ---------------- EXTRACTION ----------------
+def extract_user_ingredients(sentence: str):
+    sentence = re.sub(r"[^a-z ]", "", sentence.lower())
+    words = sentence.split()
+    return [
+        fix_spelling(normalize(w))
+        for w in words
+        if w not in STOP_WORDS
+    ]
+
+def extract_recipe_ingredients(text: str):
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+# ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
-    try:
-        import requests
-        import streamlit as st
-    except Exception:
-        return "Required libraries missing."
-
-    # 🔐 Check Hugging Face API key
-    if "HF_API_KEY" not in st.secrets:
-        return "Hugging Face API key not configured."
-
-    HF_API_KEY = st.secrets["HF_API_KEY"]
-
-    # ✅ Light & stable free model
-    MODEL = "google/flan-t5-large"
-
     recipes = load_recipes()
     if not recipes:
         return "No recipes available."
 
-    recipe_text = ""
+    intent = detect_intent(user_query)
+    query_norm = normalize(user_query)
+
+    # INGREDIENTS MODE
+    if intent == "ingredients":
+        for r in recipes:
+            name_norm = normalize(r["name"])
+            if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
+                return f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
+        return "Sorry, I couldn't find the ingredients for that recipe."
+
+    # HOW-TO MODE
+    if intent == "how_to":
+        for r in recipes:
+            name_norm = normalize(r["name"])
+            if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
+                return f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
+        return "Sorry, I couldn't find the cooking steps for that recipe."
+
+    # SUGGEST MODE
+    user_ing = extract_user_ingredients(user_query)
+    matches = []
+
     for r in recipes:
-        recipe_text += (
-            f"Recipe Name: {r['name']}\n"
-            f"Ingredients: {r['ingredients']}\n"
-            f"Steps: {r['steps']}\n"
-            f"---\n"
-        )
+        recipe_ing = extract_recipe_ingredients(r["ingredients"])
+        score = 0
 
-    # 🧠 CHATGPT-LIKE PROMPT (FRIENDLY + STEP-BY-STEP)
-    prompt = f"""
-You are a friendly, helpful assistant like ChatGPT.
+        for ui in user_ing:
+            for ri in recipe_ing:
+                if normalize(ui) in normalize(ri):
+                    score += 1
+                else:
+                    for syn in SYNONYMS.get(ui, []):
+                        if normalize(syn) in normalize(ri):
+                            score += 1
 
-Answer in a clear and human way:
-- Explain step by step
-- Use simple language
-- Be polite and supportive
-- Format neatly using bullet points or numbering
-- Use light emojis if helpful 🙂
+        if score > 0:
+            matches.append((score, r["name"]))
 
-IMPORTANT RULES:
-- Use ONLY the recipes given below
-- Do NOT invent new recipes
-- Do NOT add ingredients not listed
+    if not matches:
+        return "No related recipes found."
 
-User question:
-{user_query}
+    matches.sort(reverse=True, key=lambda x: x[0])
 
-Available recipes:
-{recipe_text}
+    response = "✨ Suggested Recipes\n\n"
+    for _, name in matches[:5]:
+        response += f"● {name}\n"
 
-Give the answer as if you are teaching a beginner.
-"""
-
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}"
-    }
-
-    try:
-        response = requests.post(
-            f"https://api-inference.huggingface.co/models/{MODEL}",
-            headers=headers,
-            json={"inputs": prompt},
-            timeout=30
-        )
-
-        result = response.json()
-
-        if isinstance(result, list):
-            return result[0].get("generated_text", "No response from AI.")
-
-        return "AI is busy. Try again later."
-
-    except Exception:
-        return "AI is busy. Try again later."
+    return response.strip()
