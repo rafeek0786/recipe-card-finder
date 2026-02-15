@@ -1,13 +1,19 @@
 from db import load_recipes
-from groq import Groq
-import streamlit as st
-
-# 🔐 Read key from Streamlit Secrets (mobile-safe)
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 def ai_suggest(user_query: str) -> str:
-    recipes = load_recipes()
+    try:
+        import streamlit as st
+        from groq import Groq
+    except Exception:
+        return "Groq library not installed."
 
+    # 🔐 Read API key safely
+    if "GROQ_API_KEY" not in st.secrets:
+        return "Groq API key not configured."
+
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
+    recipes = load_recipes()
     if not recipes:
         return "No recipes available."
 
@@ -32,9 +38,9 @@ def ai_suggest(user_query: str) -> str:
             model="llama3-70b-8192",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
-            max_tokens=500
+            max_tokens=400
         )
         return response.choices[0].message.content
 
     except Exception:
-        return "AI is busy. Try again later."
+        return "Groq AI is busy. Try again later."
