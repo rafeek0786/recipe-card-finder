@@ -1,11 +1,12 @@
 import os
 import requests
+import streamlit as st
 
 def ai_suggest(user_query):
     api_key = os.environ.get("GROQ_API_KEY")
 
     if not api_key:
-        return "❌ AI key missing. Check Streamlit Secrets."
+        return "❌ GROQ_API_KEY not found in Secrets"
 
     url = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -14,17 +15,28 @@ def ai_suggest(user_query):
         "Content-Type": "application/json"
     }
 
-    data = {
+    payload = {
         "model": "llama3-8b-8192",
         "messages": [
-            {"role": "system", "content": "You are a helpful recipe assistant."},
-            {"role": "user", "content": user_query}
+            {
+                "role": "system",
+                "content": "You are a helpful recipe assistant."
+            },
+            {
+                "role": "user",
+                "content": user_query
+            }
         ]
     }
 
-    response = requests.post(url, headers=headers, json=data)
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
 
-    if response.status_code != 200:
-        return "❌ AI error. Try again later."
+        if response.status_code != 200:
+            return f"❌ Groq API Error: {response.text}"
 
-    return response.json()["choices"][0]["message"]["content"]
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"❌ Exception: {str(e)}"
