@@ -25,7 +25,7 @@ SPELLING_FIX = {
 }
 
 def normalize(text):
-    return re.sub(r"[^a-z]", "", text.lower())
+    return re.sub(r"[^a-z]", "", str(text).lower())
 
 def fix_spelling(word):
     return SPELLING_FIX.get(word, word)
@@ -55,13 +55,18 @@ def extract_user_ingredients(sentence: str):
         if w not in STOP_WORDS
     ]
 
-# ✅ FIXED (still same purpose, same logic)
-def extract_recipe_ingredients(text: str):
-    text = text.lower()
-    parts = re.split(r"[,\n]", text)
-    return [p.strip() for p in parts if p.strip()]
+def extract_recipe_ingredients(text):
+    # ✅ works for STRING or LIST (no crash, no empty)
+    if isinstance(text, list):
+        return [normalize(i) for i in text if i]
 
-# ---------------- ADDED (CHAT STYLE TEXT ONLY) ----------------
+    if isinstance(text, str):
+        parts = re.split(r"[,\n]", text.lower())
+        return [normalize(p) for p in parts if p.strip()]
+
+    return []
+
+# ---------------- CHAT STYLE TEXT (ONLY TEXT) ----------------
 def chat_text(recipe_name: str) -> str:
     return (
         "This recipe tastes very good and has a pleasant aroma.\n"
@@ -72,6 +77,7 @@ def chat_text(recipe_name: str) -> str:
 # ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
+
     if not recipes:
         return "No recipes available."
 
@@ -81,19 +87,23 @@ def ai_suggest(user_query: str) -> str:
     # INGREDIENTS MODE
     if intent == "ingredients":
         for r in recipes:
-            name_norm = normalize(r["name"])
+            name_norm = normalize(r.get("name", ""))
             if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
-                extra = chat_text(r["name"])
-                return f"{extra}\n\n### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
+                return (
+                    f"{chat_text(r['name'])}\n\n"
+                    f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
+                )
         return "Sorry, I couldn't find the ingredients for that recipe."
 
     # HOW-TO MODE
     if intent == "how_to":
         for r in recipes:
-            name_norm = normalize(r["name"])
+            name_norm = normalize(r.get("name", ""))
             if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
-                extra = chat_text(r["name"])
-                return f"{extra}\n\n### 🍳 How to cook {r['name']}\n\n{r['steps']}"
+                return (
+                    f"{chat_text(r['name'])}\n\n"
+                    f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
+                )
         return "Sorry, I couldn't find the cooking steps for that recipe."
 
     # SUGGEST MODE
@@ -101,16 +111,16 @@ def ai_suggest(user_query: str) -> str:
     matches = []
 
     for r in recipes:
-        recipe_ing = extract_recipe_ingredients(r["ingredients"])
+        recipe_ing = extract_recipe_ingredients(r.get("ingredients", ""))
         score = 0
 
         for ui in user_ing:
             for ri in recipe_ing:
-                if normalize(ui) in normalize(ri):
+                if ui and ri and ui in ri:
                     score += 1
                 else:
                     for syn in SYNONYMS.get(ui, []):
-                        if normalize(syn) in normalize(ri):
+                        if syn in ri:
                             score += 1
 
         if score > 0:
@@ -123,7 +133,6 @@ def ai_suggest(user_query: str) -> str:
 
     response = "✨ Suggested Recipes\n\n"
     for _, name in matches[:5]:
-        extra = chat_text(name)
-        response += f"● {name}\n{extra}\n\n"
+        response += f"● {name}\n{chat_text(name)}\n\n"
 
     return response.strip()
