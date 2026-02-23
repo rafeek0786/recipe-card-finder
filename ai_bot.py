@@ -55,18 +55,14 @@ def extract_user_ingredients(sentence: str):
         if w not in STOP_WORDS
     ]
 
-def extract_recipe_ingredients(text):
-    # ✅ works for STRING or LIST (no crash, no empty)
-    if isinstance(text, list):
-        return [normalize(i) for i in text if i]
+# ✅ THIS IS THE KEY FIX (DB COMPATIBLE)
+def extract_recipe_ingredients(text: str):
+    # ingredients comes from SQLite as TEXT
+    # we safely split by comma & space
+    parts = re.split(r"[,\n ]+", text.lower())
+    return [normalize(p) for p in parts if p.strip()]
 
-    if isinstance(text, str):
-        parts = re.split(r"[,\n]", text.lower())
-        return [normalize(p) for p in parts if p.strip()]
-
-    return []
-
-# ---------------- CHAT STYLE TEXT (ONLY TEXT) ----------------
+# ---------------- CHAT STYLE TEXT (NO LOGIC) ----------------
 def chat_text(recipe_name: str) -> str:
     return (
         "This recipe tastes very good and has a pleasant aroma.\n"
@@ -77,7 +73,6 @@ def chat_text(recipe_name: str) -> str:
 # ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
-
     if not recipes:
         return "No recipes available."
 
@@ -87,7 +82,7 @@ def ai_suggest(user_query: str) -> str:
     # INGREDIENTS MODE
     if intent == "ingredients":
         for r in recipes:
-            name_norm = normalize(r.get("name", ""))
+            name_norm = normalize(r["name"])
             if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
                 return (
                     f"{chat_text(r['name'])}\n\n"
@@ -98,7 +93,7 @@ def ai_suggest(user_query: str) -> str:
     # HOW-TO MODE
     if intent == "how_to":
         for r in recipes:
-            name_norm = normalize(r.get("name", ""))
+            name_norm = normalize(r["name"])
             if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
                 return (
                     f"{chat_text(r['name'])}\n\n"
@@ -111,23 +106,27 @@ def ai_suggest(user_query: str) -> str:
     matches = []
 
     for r in recipes:
-        recipe_ing = extract_recipe_ingredients(r.get("ingredients", ""))
+        recipe_ing = extract_recipe_ingredients(r["ingredients"])
         score = 0
 
         for ui in user_ing:
             for ri in recipe_ing:
-                if ui and ri and ui in ri:
+                if ui and ri and ui == ri:
                     score += 1
                 else:
                     for syn in SYNONYMS.get(ui, []):
-                        if syn in ri:
+                        if syn == ri:
                             score += 1
 
         if score > 0:
             matches.append((score, r["name"]))
 
     if not matches:
-        return "No related recipes found."
+        # ✅ fallback using DB data only
+        response = "✨ Available Recipes\n\n"
+        for r in recipes[:5]:
+            response += f"● {r['name']}\n{chat_text(r['name'])}\n\n"
+        return response.strip()
 
     matches.sort(reverse=True, key=lambda x: x[0])
 
