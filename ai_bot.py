@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 STOP_WORDS = {
     "i", "have", "a", "an", "the", "with", "and", "or",
     "to", "can", "cook", "make", "using", "want", "need",
-    "please", "suggest", "recipe", "recipes", "for", "something",
+    "please", "suggest", "recipe", "recipes", "for",
     "what", "is", "are", "of"
 }
 
@@ -16,6 +16,7 @@ SPELLING_FIX = {
     "briyani": "biryani"
 }
 
+# ---------- helpers ----------
 def normalize(text):
     return re.sub(r"[^a-z]", "", str(text).lower())
 
@@ -25,23 +26,23 @@ def fix_spelling(word):
 def similarity(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
-# ---------------- INTENT DETECTION ----------------
+# ---------- intent detection ----------
 def detect_intent(query: str) -> str:
     q = query.lower()
-    if any(w in q for w in ["how to", "steps", "method"]):
+    if "how to" in q or "steps" in q or "method" in q:
         return "how_to"
-    if any(w in q for w in ["ingredient", "ingredients"]):
+    if "ingredient" in q or "ingredients" in q:
         return "ingredients"
     return "suggest"
 
-# ---------------- CHAT STYLE TEXT (ONE LINE ONLY) ----------------
+# ---------- AI suggestion text ----------
 def chat_text(recipe_name: str) -> str:
     return (
         "This recipe tastes very good and has a pleasant aroma. "
         "It is easy to cook and many people enjoy this food."
     )
 
-# ---------------- AI CORE ----------------
+# ---------- MAIN AI FUNCTION ----------
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
     if not recipes:
@@ -50,29 +51,31 @@ def ai_suggest(user_query: str) -> str:
     intent = detect_intent(user_query)
     query_norm = normalize(user_query)
 
-    # HOW-TO MODE
+    # ----- HOW TO MODE -----
     if intent == "how_to":
         for r in recipes:
             if normalize(r["name"]) in query_norm:
                 return (
                     f"● {r['name']}\n"
                     f"{chat_text(r['name'])}\n\n"
-                    f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
+                    f"### 🍳 How to cook {r['name']}\n\n"
+                    f"{r['steps']}"
                 )
-        return "No matching recipe found for your search."
+        return "No matching recipe found."
 
-    # INGREDIENTS MODE
+    # ----- INGREDIENT MODE -----
     if intent == "ingredients":
         for r in recipes:
             if normalize(r["name"]) in query_norm:
                 return (
                     f"● {r['name']}\n"
                     f"{chat_text(r['name'])}\n\n"
-                    f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
+                    f"### 🧾 Ingredients for {r['name']}\n\n"
+                    f"{r['ingredients']}"
                 )
-        return "No matching recipe found for your search."
+        return "No matching recipe found."
 
-    # SUGGEST MODE (SEARCH RESULT ONLY)
+    # ----- SUGGEST MODE -----
     matches = []
     for r in recipes:
         name_norm = normalize(r["name"])
@@ -80,13 +83,14 @@ def ai_suggest(user_query: str) -> str:
             matches.append(r)
 
     if not matches:
-        return "No matching recipe found for your search."
+        return "No matching recipe found."
 
     response = "✨ Recipes Matching Your Search\n\n"
+
     for r in matches:
         response += (
             f"● {r['name']}\n"
-            f"{chat_text(r['name'])}\n\n"
+            f"  {chat_text(r['name'])}\n\n"
         )
 
     return response.strip()
