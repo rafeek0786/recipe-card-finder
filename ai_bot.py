@@ -55,8 +55,11 @@ def extract_user_ingredients(sentence: str):
         if w not in STOP_WORDS
     ]
 
+# ✅ FIXED (still same purpose, same logic)
 def extract_recipe_ingredients(text: str):
-    return [line.strip() for line in text.splitlines() if line.strip()]
+    text = text.lower()
+    parts = re.split(r"[,\n]", text)
+    return [p.strip() for p in parts if p.strip()]
 
 # ---------------- ADDED (CHAT STYLE TEXT ONLY) ----------------
 def chat_text(recipe_name: str) -> str:
