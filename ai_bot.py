@@ -58,6 +58,14 @@ def extract_user_ingredients(sentence: str):
 def extract_recipe_ingredients(text: str):
     return [line.strip() for line in text.splitlines() if line.strip()]
 
+# ---------------- ADDED (CHAT STYLE TEXT ONLY) ----------------
+def chat_text(recipe_name: str) -> str:
+    return (
+        "This recipe tastes very good and has a pleasant aroma.\n"
+        "It is easy to cook and many people enjoy this food.\n"
+        "This dish is suitable for regular home meals."
+    )
+
 # ---------------- AI CORE ----------------
 def ai_suggest(user_query: str) -> str:
     recipes = load_recipes()
@@ -72,7 +80,8 @@ def ai_suggest(user_query: str) -> str:
         for r in recipes:
             name_norm = normalize(r["name"])
             if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
-                return f"### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
+                extra = chat_text(r["name"])
+                return f"{extra}\n\n### 🧾 Ingredients for {r['name']}\n\n{r['ingredients']}"
         return "Sorry, I couldn't find the ingredients for that recipe."
 
     # HOW-TO MODE
@@ -80,7 +89,8 @@ def ai_suggest(user_query: str) -> str:
         for r in recipes:
             name_norm = normalize(r["name"])
             if name_norm in query_norm or similarity(name_norm, query_norm) > 0.7:
-                return f"### 🍳 How to cook {r['name']}\n\n{r['steps']}"
+                extra = chat_text(r["name"])
+                return f"{extra}\n\n### 🍳 How to cook {r['name']}\n\n{r['steps']}"
         return "Sorry, I couldn't find the cooking steps for that recipe."
 
     # SUGGEST MODE
@@ -110,6 +120,7 @@ def ai_suggest(user_query: str) -> str:
 
     response = "✨ Suggested Recipes\n\n"
     for _, name in matches[:5]:
-        response += f"● {name}\n"
+        extra = chat_text(name)
+        response += f"● {name}\n{extra}\n\n"
 
     return response.strip()
